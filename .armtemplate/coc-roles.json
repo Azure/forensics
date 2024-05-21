@@ -1,0 +1,53 @@
+
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+    "parameters": {
+      "IdentityPrincipalID": {
+        "type": "string",
+        "metadata": {
+          "description": "SOC Automation Account Identity Principal ID"
+        }
+      },
+       "_CurrentDateTimeInTicks": {
+            "metadata": {
+                "description": "Current date time in ticks used for unique variables"
+            },
+            "type": "string",
+            "defaultValue": "[utcNow('yyyy-MM-dd')]"
+        }
+
+    },
+
+    "variables": {
+        "UniqueStringBasedOnTimeStamp": "[uniqueString(deployment().name, parameters('_CurrentDateTimeInTicks'))]"
+    },
+    "resources": [
+      {
+        "type": "Microsoft.Authorization/roleAssignments",
+        "apiVersion": "2022-04-01",
+        "name": "[guid('rbacRG-owner', variables('UniqueStringBasedOnTimeStamp'))]",
+        "dependsOn": [],
+        "properties": {
+            "roleDefinitionId": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]",
+            "principalId": "[parameters('IdentityPrincipalID')]",
+            "principalType": "ServicePrincipal"
+        }
+      },
+
+      {
+        "type": "Microsoft.Authorization/roleAssignments",
+        "apiVersion": "2022-04-01",
+        "name": "[guid('rbacRG-keyVaultSecretUser', variables('UniqueStringBasedOnTimeStamp'))]",
+        "dependsOn": [],
+        "properties": {
+            "roleDefinitionId": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', '4633458b-17de-408a-b874-0445c86b69e6')]",
+            "principalId": "[parameters('IdentityPrincipalID')]",
+            "principalType": "ServicePrincipal"
+        }
+      }
+
+
+    ],
+    "outputs": {}
+}

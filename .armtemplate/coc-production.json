@@ -1,0 +1,397 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "location": {
+            "metadata": {
+                "description": "Location for all resources."
+            },
+            "defaultValue": "westeurope",
+            "type": "string"
+        },
+        "virtualMachines_CoC_Prod_VM01_name": {
+            "metadata": {
+                "description": "Name of the virtual machine."
+            },
+            "defaultValue": "CoC-Prod-VM01",
+            "type": "String"
+        },
+        "adminUsername": {
+            "metadata": {
+                "description": "Admin username for virtual machine"
+            },
+            "defaultValue": "cocprodadmin",
+            "type": "string"
+        },
+        "adminPassword": {
+            "metadata": {
+                "description": "Admin password for the virtual machine"
+            },
+            "type": "secureString"
+        },
+        "vaults_CoC_Production_keyvault_name": {
+            "metadata": {
+                "description": "Name of the key vault."
+            },
+            "defaultValue": "CoC-Production-keyvault",
+            "type": "String"
+        },
+        "virtualNetworks_CoC_Production_vnet_name": {
+            "metadata": {
+                "description": "Name of the virtual network."
+            },
+            "defaultValue": "CoC-Production-vnet",
+            "type": "String"
+        },
+        "networkSecurityGroups_CoC_Production_vnet_server_nsg_name": {
+            "metadata": {
+                "description": "Name of the network security group."
+            },
+            "defaultValue": "CoC-Production-vnet-server-nsg-westeurope",
+            "type": "String"
+        },
+        "storage_Account_Type": {
+            "metadata": {
+                "description": "Storage Account Type"
+            },
+            "defaultValue": "StandardSSD_LRS",
+            "type": "string"
+        },
+       "_CurrentDateTimeInTicks": {
+            "metadata": {
+                "description": "Current date time in ticks used for unique variables"
+            },
+            "type": "string",
+            "defaultValue": "[utcNow('yyyy-MM-dd')]"
+        }
+
+    },
+    "variables": {
+        "UniqueStringBasedOnTimeStamp": "[uniqueString(deployment().name, parameters('_CurrentDateTimeInTicks'))]",
+        "networkInterfaces_coc_prod_nic_name": "[concat(parameters('virtualMachines_CoC_Prod_VM01_name'), '-nic')]",
+        "publicIPAddresses_CoC_HRW_VM_ip_name": "[concat(parameters('virtualMachines_CoC_Prod_VM01_name'), '-pip')]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.KeyVault/vaults",
+            "apiVersion": "2023-02-01",
+            "name": "[parameters('vaults_CoC_Production_keyvault_name')]",
+            "location": "[parameters('location')]",
+            "properties": {
+                "sku": {
+                    "family": "A",
+                    "name": "Standard"
+                },
+                "tenantId": "[subscription().tenantId]",
+                "accessPolicies": [],
+                "enabledForDeployment": false,
+                "enabledForDiskEncryption": true,
+                "enabledForTemplateDeployment": false,
+                "enableSoftDelete": true,
+                "softDeleteRetentionInDays": 90,
+                "enableRbacAuthorization": true,
+                "enablePurgeProtection": true,
+                "vaultUri": "[concat(concat('https://',parameters('vaults_CoC_Production_keyvault_name')),'.vault.azure.net/')]",
+                "provisioningState": "Succeeded",
+                "publicNetworkAccess": "Enabled"
+            }
+        },
+        {
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "apiVersion": "2022-11-01",
+            "name": "[parameters('networkSecurityGroups_CoC_Production_vnet_server_nsg_name')]",
+            "location": "[parameters('location')]",
+            "properties": {
+                "securityRules": [
+                    {
+                        "name": "AllowAnyRDPInbound",
+                        "id": "[resourceId('Microsoft.Network/networkSecurityGroups/securityRules', parameters('networkSecurityGroups_CoC_Production_vnet_server_nsg_name'), 'AllowAnyRDPInbound')]",
+                        "type": "Microsoft.Network/networkSecurityGroups/securityRules",
+                        "properties": {
+                            "protocol": "TCP",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "3389",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 100,
+                            "direction": "Inbound",
+                            "sourcePortRanges": [],
+                            "destinationPortRanges": [],
+                            "sourceAddressPrefixes": [],
+                            "destinationAddressPrefixes": []
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Network/publicIPAddresses",
+            "apiVersion": "2022-11-01",
+            "name": "[variables('publicIPAddresses_CoC_HRW_VM_ip_name')]",
+            "location": "[parameters('location')]",
+            "sku": {
+                "name": "Standard",
+                "tier": "Regional"
+            },
+            "properties": {
+                "publicIPAddressVersion": "IPv4",
+                "publicIPAllocationMethod": "Static",
+                "idleTimeoutInMinutes": 4,
+                "ipTags": []
+            }
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachines",
+            "apiVersion": "2023-03-01",
+            "name": "[parameters('virtualMachines_CoC_Prod_VM01_name')]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkInterfaces', variables('networkInterfaces_coc_prod_nic_name'))]",
+                "[resourceID('Microsoft.keyvault/vaults', parameters('vaults_CoC_Production_keyvault_name'))]"
+            ],
+            "identity": {
+                "type": "SystemAssigned"
+            },
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "Standard_D8s_v3"
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "MicrosoftWindowsServer",
+                        "offer": "WindowsServer",
+                        "sku": "2022-datacenter-azure-edition",
+                        "version": "latest"
+                    },
+                    "osDisk": {
+                        "osType": "Windows",
+                        "name": "[concat(parameters('virtualMachines_CoC_Prod_VM01_name'), '-osdisk')]",
+                        "createOption": "FromImage",
+                        "caching": "ReadWrite",
+                        "managedDisk": {
+                            "storageAccountType": "[parameters('storage_Account_Type')]"
+                        },
+                        "deleteOption": "Delete"
+                    },
+                    "dataDisks": [
+                        {
+                            "lun": 0,
+                            "name": "[concat(parameters('virtualMachines_CoC_Prod_VM01_name'), '-DataDisk-00')]",
+                            "createOption": "Empty",
+                            "diskSizeGB": 32,
+                            "caching": "ReadOnly",
+                            "writeAcceleratorEnabled": false,
+                            "managedDisk": {
+                                "storageAccountType": "[parameters('storage_Account_Type')]"
+                            },
+                            "deleteOption": "Detach",
+                            "toBeDetached": false
+                        },
+                        {
+                            "lun": 1,
+                            "name": "[concat(parameters('virtualMachines_CoC_Prod_VM01_name'), '-DataDisk-01')]",
+                            "createOption": "Empty",
+                            "diskSizeGB": 32,
+                            "caching": "ReadOnly",
+                            "writeAcceleratorEnabled": false,
+                            "managedDisk": {
+                                "storageAccountType": "[parameters('storage_Account_Type')]"
+                            },
+                            "deleteOption": "Detach",
+                            "toBeDetached": false
+                        }
+                    ],
+                    "diskControllerType": "SCSI"
+                },
+                "osProfile": {
+                    "computerName": "[parameters('virtualMachines_CoC_Prod_VM01_name')]",
+                    "adminUsername": "[parameters('adminUsername')]",
+                    "adminPassword": "[parameters('adminPassword')]",
+                    "windowsConfiguration": {
+                        "provisionVMAgent": true,
+                        "enableAutomaticUpdates": true,
+                        "patchSettings": {
+                            "patchMode": "AutomaticByPlatform",
+                            "automaticByPlatformSettings": {
+                                "bypassPlatformSafetyChecksOnUserSchedule": true
+                            },
+                            "assessmentMode": "AutomaticByPlatform",
+                            "enableHotpatching": false
+                        },
+                        "enableVMAgentPlatformUpdates": false
+                    },
+                    "secrets": [],
+                    "allowExtensionOperations": true
+                },
+                "securityProfile": {
+                    "uefiSettings": {
+                        "secureBootEnabled": true,
+                        "vTpmEnabled": true
+                    },
+                    "securityType": "TrustedLaunch"
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('networkInterfaces_coc_prod_nic_name'))]",
+                            "properties": {
+                                "deleteOption": "Delete"
+                            }
+                        }
+                    ]
+                },
+                "diagnosticsProfile": {
+                    "bootDiagnostics": {
+                        "enabled": true
+                    }
+                },
+                "licenseType": "Windows_Server"
+            }
+        },
+
+        {
+        "type": "Microsoft.Compute/virtualMachines/extensions",
+        "apiVersion": "2022-03-01",
+        "name": "[concat(parameters('virtualMachines_CoC_Prod_VM01_name'), '/RunPowerShellScript')]",
+        "location": "[resourceGroup().location]",
+        "dependsOn": [
+            "[resourceId('Microsoft.Compute/virtualMachines', parameters('virtualMachines_CoC_Prod_VM01_name'))]"
+        ],
+        "properties": {
+            "publisher": "Microsoft.Compute",
+            "type": "CustomScriptExtension",
+            "typeHandlerVersion": "1.10",
+            "autoUpgradeMinorVersion": true,
+            "settings": {
+                "fileUris": [
+                    "https://raw.githubusercontent.com/Azure/forensics/main/.powershell/prod-vm.ps1"
+                ],
+                "commandToExecute": "[concat(' start powershell -ExecutionPolicy Unrestricted -File prod-vm.ps1 -CoCProdKeyvaultName ', parameters('vaults_CoC_Production_keyvault_name'), ' -CoCProdRGName ', resourceGroup().name, ' -CoCProdVMName ', parameters('virtualMachines_CoC_Prod_VM01_name'), ' -VMIdentity ', reference(resourceId('Microsoft.Compute/virtualMachines', parameters('virtualMachines_CoC_Prod_VM01_name')), '2023-03-01', 'full').identity.principalId)]"
+            }
+        }
+        },
+
+        {
+            "type": "Microsoft.Network/virtualNetworks",
+            "apiVersion": "2022-11-01",
+            "name": "[parameters('virtualNetworks_CoC_Production_vnet_name')]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroups_CoC_Production_vnet_server_nsg_name'))]"
+            ],
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "10.100.0.0/16"
+                    ]
+                },
+                "dhcpOptions": {
+                    "dnsServers": []
+                },
+                "subnets": [
+                    {
+                        "name": "server",
+                        "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworks_CoC_Production_vnet_name'), 'server')]",
+                        "properties": {
+                            "addressPrefix": "10.100.0.0/24",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroups_CoC_Production_vnet_server_nsg_name'))]"
+                            },
+                            "serviceEndpoints": [],
+                            "delegations": [],
+                            "privateEndpointNetworkPolicies": "Disabled",
+                            "privateLinkServiceNetworkPolicies": "Enabled"
+                        },
+                        "type": "Microsoft.Network/virtualNetworks/subnets"
+                    }
+                ],
+                "virtualNetworkPeerings": [],
+                "enableDdosProtection": false
+            }
+        },
+        {
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "2022-11-01",
+            "name": "[variables('networkInterfaces_coc_prod_nic_name')]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPAddresses_CoC_HRW_VM_ip_name'))]",
+                "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworks_CoC_Production_vnet_name'), 'server')]"
+            ],
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "publicIPAddress": {
+                                "name": "[variables('publicIPAddresses_CoC_HRW_VM_ip_name')]",
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPAddresses_CoC_HRW_VM_ip_name'))]",
+                                "properties": {
+                                    "ipConfiguration": {
+                                        "id": "[concat(resourceId('Microsoft.Network/networkInterfaces', variables('networkInterfaces_coc_prod_nic_name')), '/ipConfigurations/ipconfig1')]"
+                                    },
+                                    "deleteOption": "Delete"
+                                },
+                                "type": "Microsoft.Network/publicIPAddresses",
+                                "sku": {
+                                    "name": "Basic",
+                                    "tier": "Regional"
+                                }
+                            },
+                            "subnet": {
+                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('virtualNetworks_CoC_Production_vnet_name'), 'server')]"
+                            },
+                            "privateIPAllocationMethod": "Dynamic",
+                            "primary": true,
+                            "privateIPAddressVersion": "IPv4"
+                        }
+                    }
+                ],
+                "dnsSettings": {
+                    "dnsServers": []
+                },
+                "enableAcceleratedNetworking": true,
+                "enableIPForwarding": false,
+                "disableTcpStateTracking": false,
+                "nicType": "Standard"
+            }
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworks/subnets",
+            "apiVersion": "2022-11-01",
+            "name": "[concat(parameters('virtualNetworks_CoC_Production_vnet_name'), '/server')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', parameters('virtualNetworks_CoC_Production_vnet_name'))]",
+                "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroups_CoC_Production_vnet_server_nsg_name'))]"
+            ],
+            "properties": {
+                "addressPrefix": "10.100.0.0/24",
+                "networkSecurityGroup": {
+                    "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('networkSecurityGroups_CoC_Production_vnet_server_nsg_name'))]"
+                },
+                "serviceEndpoints": [],
+                "delegations": [],
+                "privateEndpointNetworkPolicies": "Disabled",
+                "privateLinkServiceNetworkPolicies": "Enabled"
+            }
+        },
+        // Temporary role needed only in LAB to run the script that enable Azure Disk Encryption inside the VM
+        {
+            "type": "Microsoft.Authorization/roleAssignments",
+            "apiVersion": "2022-04-01",
+            "name": "[guid('OwnerOnRG-VMidentity', variables('UniqueStringBasedOnTimeStamp'))]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Compute/virtualMachines', parameters('virtualMachines_CoC_Prod_VM01_name'))]"
+            ],
+            "properties": {
+                "roleDefinitionId": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', '8e3af657-a8ff-443c-a75c-2fe8c4bcb635')]",
+                "principalId": "[reference(resourceId('Microsoft.Compute/virtualMachines', parameters('virtualMachines_CoC_Prod_VM01_name')), '2023-03-01', 'full').identity.principalId]",
+                "principalType": "ServicePrincipal"
+            }
+        }
+    ],
+    "outputs": {
+
+    }
+}

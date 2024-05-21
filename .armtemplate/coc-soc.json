@@ -1,0 +1,904 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "coc-soc-Location": {
+            "metadata": {
+                "description": "Location for all resources."
+            },
+            "defaultValue": "westeurope",
+            "type": "string"
+        },
+        "coc-soc-vnet_name": {
+            "metadata": {
+                "description": "Name of the VNET resource for the SOC"
+            },
+            "type": "String",
+            "defaultValue": "CoC-SOC-vnet"
+        },
+        "coc-soc-nsg_name": {
+            "metadata": {
+                "description": "Name of the NSG resource for the SOC"
+            },
+            "defaultValue": "CoC-SOC-vnet-soc-subnet01-nsg",
+            "type": "String"
+        },
+        "coc-soc-keyvault_name": {
+            "metadata": {
+                "description": "UNIQUE name of the Key Vault resource for the SOC"
+            },
+            "type": "String",
+            "defaultValue": "CoC-SOC-KV-<UNIQUESTRING>"
+        },
+        "coc-soc-storageAccount_name": {
+            "metadata": {
+                "description": "UNIQUE name of the Storage Account resource for the SOC"
+            },
+            "type": "String",
+            "defaultValue": "cocsocstorage<UNIQUESTRING>"
+        },
+        "coc-soc-storageAccount_Type": {
+            "metadata": {
+                "description": "Storage Account Type"
+            },
+            "defaultValue": "StandardSSD_LRS",
+            "type": "string"
+        },
+        "coc-soc-LogAnWks_name": {
+            "metadata": {
+                "description": "UNIQUE name of the Log Analytics Workspace resource for the SOC"
+            },
+            "type": "String",
+            "defaultValue": "CoC-SOC-LA-<UNIQUESTRING>"
+        },
+        "coc-soc-automationAccount_name": {
+            "metadata": {
+                "description": "Name of the Automation Account resource for the SOC"
+            },
+            "type": "String",
+            "defaultValue": "CoC-SOC-AA-LA-<UNIQUESTRING>"
+        },
+        "coc-soc-workerGroupName": {
+            "metadata": {
+                "description": "Name of the Hybrid Runbook Worker Group"
+            },
+            "defaultValue": "CoC-HRW-Windows",
+            "type": "string"
+        },
+        "coc-soc-HRW_VM_name": {
+            "metadata": {
+                "description": "Name of the Hybrid Runbook Worker VM resource for the SOC"
+            },
+            "type": "String",
+            "defaultValue": "CoC-SOC-HRW"
+        },
+        "coc-soc-HRW_adminUsername": {
+            "metadata": {
+                "description": "Admin username for the Hybrid Runbook Worker VM"
+            },
+            "defaultValue": "cocsocadmin",
+            "type": "string"
+        },
+        "coc-soc-HRW_adminPassword": {
+            "metadata": {
+                "description": "Admin password for the Hybrid Runbook Worker VM"
+            },
+            "type": "secureString"
+        },
+
+
+
+
+        "_CurrentDateTimeInTicks": {
+            "metadata": {
+                "description": "Current date time in ticks used for unique variables"
+            },
+            "type": "string",
+            "defaultValue": "[utcNow('yyyy-MM-dd')]"
+        }
+    },
+    "variables": {
+        "UniqueStringBasedOnTimeStamp": "[uniqueString(deployment().name, parameters('_CurrentDateTimeInTicks'))]",
+        "networkInterfaces_coc_hrw_nic_name": "[concat(parameters('coc-soc-HRW_VM_name'), '-nic')]",
+        "publicIPAddresses_CoC_HRW_VM_ip_name": "[concat(parameters('coc-soc-HRW_VM_name'), '-pip')]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Automation/automationAccounts",
+            "apiVersion": "2022-08-08",
+            "name": "[parameters('coc-soc-automationAccount_name')]",
+            "location": "[parameters('coc-soc-Location')]",
+            "identity": {
+                "type": "SystemAssigned"
+            },
+            "properties": {
+                "publicNetworkAccess": true,
+                "disableLocalAuth": false,
+                "sku": {
+                    "name": "Basic"
+                },
+                "encryption": {
+                    "keySource": "Microsoft.Automation",
+                    "identity": {}
+                }
+            },
+            "resources": [
+                {
+                "name": "[parameters('coc-soc-workerGroupName')]",
+                "type": "hybridRunbookWorkerGroups",
+                "apiVersion": "2022-02-22",
+                "dependsOn": [
+                    "[resourceId('Microsoft.Automation/automationAccounts', parameters('coc-soc-automationAccount_name'))]",
+                    "[resourceId('Microsoft.Compute/virtualMachines', parameters('coc-soc-HRW_VM_name'))]"
+                ],
+                "resources" : [
+                    {
+                    "name": "[guid('testhw', variables('UniqueStringBasedOnTimeStamp'))]",
+                    "type": "hybridRunbookWorkers",
+                    "apiVersion": "2021-06-22",
+                    "dependsOn": [
+                        "[resourceId('Microsoft.Automation/automationAccounts', parameters('coc-soc-automationAccount_name'))]",
+                        "[resourceId('Microsoft.Automation/automationAccounts/hybridRunbookWorkerGroups', parameters('coc-soc-automationAccount_name'),parameters('coc-soc-workerGroupName'))]",
+                        "[resourceId('Microsoft.Compute/virtualMachines', parameters('coc-soc-HRW_VM_name'))]"
+                    ],
+                    "properties": {
+                        "vmResourceId": "[resourceId('Microsoft.Compute/virtualMachines', parameters('coc-soc-HRW_VM_name'))]"
+                    }
+                    }
+                ]
+                }
+            ]
+        },
+
+        {
+            "type": "Microsoft.Automation/automationAccounts/variables",
+            "apiVersion": "2022-08-08",
+            "name": "[concat(parameters('coc-soc-automationAccount_name'), '/destKV')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Automation/automationAccounts', parameters('coc-soc-automationAccount_name'))]",
+                "[resourceId('Microsoft.Compute/virtualMachines', parameters('coc-soc-HRW_VM_name'))]"
+            ],
+            "properties": {
+                "isEncrypted": false,
+                "value": "[concat('\"',parameters('coc-soc-keyvault_name'),'\"')]",
+                "description": "The name of the keyvault to store a copy of the BEK in the dest subscription"
+            }
+        },
+        {
+            "type": "Microsoft.Automation/automationAccounts/variables",
+            "apiVersion": "2022-08-08",
+            "name": "[concat(parameters('coc-soc-automationAccount_name'), '/destRGName')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Automation/automationAccounts', parameters('coc-soc-automationAccount_name'))]",
+                "[resourceId('Microsoft.Compute/virtualMachines', parameters('coc-soc-HRW_VM_name'))]"
+            ],
+            "properties": {
+                "isEncrypted": false,
+                "value": "[concat('\"',resourceGroup().name,'\"')]",
+                "description": "The name of the resource group containing the storage account being copied to "
+            }
+        },
+        {
+            "type": "Microsoft.Automation/automationAccounts/variables",
+            "apiVersion": "2022-08-08",
+            "name": "[concat(parameters('coc-soc-automationAccount_name'), '/destSAblob')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Automation/automationAccounts', parameters('coc-soc-automationAccount_name'))]",
+                "[resourceId('Microsoft.Compute/virtualMachines', parameters('coc-soc-HRW_VM_name'))]"
+            ],
+            "properties": {
+                "isEncrypted": false,
+                "value": "[concat('\"',parameters('coc-soc-storageAccount_name'),'\"')]",
+                "description": "The name of the storage account for BLOB"
+            }
+        },
+        {
+            "type": "Microsoft.Automation/automationAccounts/variables",
+            "apiVersion": "2022-08-08",
+            "name": "[concat(parameters('coc-soc-automationAccount_name'), '/destSAfile')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Automation/automationAccounts', parameters('coc-soc-automationAccount_name'))]",
+                "[resourceId('Microsoft.Compute/virtualMachines', parameters('coc-soc-HRW_VM_name'))]"
+            ],
+            "properties": {
+                "isEncrypted": false,
+                "value": "[concat('\"',parameters('coc-soc-storageAccount_name'),'\"')]",
+                "description": "The name of the storage account for FILE"
+            }
+        },
+        {
+            "type": "Microsoft.Automation/automationAccounts/variables",
+            "apiVersion": "2022-08-08",
+            "name": "[concat(parameters('coc-soc-automationAccount_name'), '/destSubId')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Automation/automationAccounts', parameters('coc-soc-automationAccount_name'))]",
+                "[resourceId('Microsoft.Compute/virtualMachines', parameters('coc-soc-HRW_VM_name'))]"
+            ],
+            "properties": {
+                "isEncrypted": false,
+                "value": "[concat('\"',subscription().subscriptionId,'\"')]",
+                "description": "The subscription containing the storage account being copied to (ex. 00112233-4455-6677-8899-aabbccddeeff)"
+            }
+        },
+
+        {
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "name": "[concat(parameters('coc-soc-HRW_VM_name'),'/HybridWorkerExtension')]",
+            "apiVersion": "2022-03-01",
+            "location": "[parameters('coc-soc-Location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Automation/automationAccounts', parameters('coc-soc-automationAccount_name'))]",
+                "[resourceId('Microsoft.Compute/virtualMachines', parameters('coc-soc-HRW_VM_name'))]"
+            ],
+            "properties": {
+                "publisher": "Microsoft.Azure.Automation.HybridWorker",
+                "type": "HybridWorkerForWindows",
+                "typeHandlerVersion": "1.1",
+                "autoUpgradeMinorVersion": true,
+                "enableAutomaticUpgrade": true,
+                "settings": {
+                "AutomationAccountURL": "[reference(resourceId('Microsoft.Automation/automationAccounts', parameters('coc-soc-automationAccount_name'))).AutomationHybridServiceUrl]"
+                
+                }
+            }
+        },
+        {
+            "type": "Microsoft.KeyVault/vaults",
+            "apiVersion": "2023-02-01",
+            "name": "[parameters('coc-soc-keyvault_name')]",
+            "location": "[parameters('coc-soc-Location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', parameters('coc-soc-vnet_name'))]",
+                "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('coc-soc-vnet_name'), 'soc-subnet01')]"
+            ],
+            "properties": {
+                "sku": {
+                    "family": "A",
+                    "name": "Standard"
+                },
+                "tenantId": "[subscription().tenantId]",
+                "networkAcls": {
+                    "bypass": "AzureServices",
+                    "defaultAction": "Deny",
+                    "ipRules": [],
+                    "virtualNetworkRules": [
+                        {
+                            "id": "[concat(resourceId('Microsoft.Network/virtualNetworks', parameters('coc-soc-vnet_name')), '/subnets/soc-subnet01')]",
+                            "ignoreMissingVnetServiceEndpoint": false
+                        }
+                    ]
+                },
+                "accessPolicies": [],
+                "enabledForDeployment": false,
+                "enabledForDiskEncryption": true,
+                "enabledForTemplateDeployment": false,
+                "enableSoftDelete": true,
+                "softDeleteRetentionInDays": 90,
+                "enableRbacAuthorization": true,
+                "enablePurgeProtection": true,
+                "vaultUri": "[concat(concat('https://',parameters('coc-soc-keyvault_name')),'.vault.azure.net/')]",
+                "provisioningState": "Succeeded",
+                "publicNetworkAccess": "Enabled"
+            }
+        },
+        {
+            "type": "Microsoft.Network/publicIPAddresses",
+            "apiVersion": "2023-04-01",
+            "name": "[variables('publicIPAddresses_CoC_HRW_VM_ip_name')]",
+            "location": "[parameters('coc-soc-Location')]",
+            "sku": {
+                "name": "Standard",
+                "tier": "Regional"
+            },
+            "properties": {
+                "publicIPAddressVersion": "IPv4",
+                "publicIPAllocationMethod": "Static",
+                "idleTimeoutInMinutes": 4,
+                "ipTags": []
+            }
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworks",
+            "apiVersion": "2023-04-01",
+            "name": "[parameters('coc-soc-vnet_name')]",
+            "location": "[parameters('coc-soc-Location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('coc-soc-nsg_name'))]"
+            ],
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "172.16.0.0/16"
+                    ]
+                },
+                "dhcpOptions": {
+                    "dnsServers": []
+                },
+                "subnets": [
+                    {
+                        "name": "soc-subnet01",
+                        "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('coc-soc-vnet_name'), 'soc-subnet01')]",
+                        "properties": {
+                            "addressPrefix": "172.16.0.0/24",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('coc-soc-nsg_name'))]"
+                            },
+                            "serviceEndpoints": [
+                                {
+                                    "service": "Microsoft.Storage",
+                                    "locations": [
+                                        "[parameters('coc-soc-Location')]"
+                                    ]
+                                },
+                                {
+                                    "service": "Microsoft.KeyVault",
+                                    "locations": [
+                                        "[parameters('coc-soc-Location')]"
+                                    ]
+                                }
+                            ],
+                            "delegations": [],
+                            "privateEndpointNetworkPolicies": "Disabled",
+                            "privateLinkServiceNetworkPolicies": "Enabled"
+                        },
+                        "type": "Microsoft.Network/virtualNetworks/subnets"
+                    }
+                ],
+                "virtualNetworkPeerings": [],
+                "enableDdosProtection": false
+            }
+        },
+        {
+            "type": "Microsoft.OperationalInsights/workspaces",
+            "apiVersion": "2021-12-01-preview",
+            "name": "[parameters('coc-soc-LogAnWks_name')]",
+            "location": "[parameters('coc-soc-Location')]",
+            "properties": {
+                "sku": {
+                    "name": "pergb2018"
+                },
+                "retentionInDays": 30,
+                "features": {
+                    "enableLogAccessUsingOnlyResourcePermissions": true
+                },
+                "workspaceCapping": {
+                    "dailyQuotaGb": -1
+                },
+                "publicNetworkAccessForIngestion": "Enabled",
+                "publicNetworkAccessForQuery": "Enabled"
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2023-01-01",
+            "name": "[parameters('coc-soc-storageAccount_name')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', parameters('coc-soc-vnet_name'))]",
+                "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('coc-soc-vnet_name'), 'soc-subnet01')]"
+            ],
+            "location": "[parameters('coc-soc-Location')]",
+            "sku": {
+                "name": "Standard_LRS",
+                "tier": "Standard"
+            },
+            "kind": "StorageV2",
+            "properties": {
+                "dnsEndpointType": "Standard",
+                "defaultToOAuthAuthentication": false,
+                "publicNetworkAccess": "Enabled",
+                "allowCrossTenantReplication": true,
+                "minimumTlsVersion": "TLS1_2",
+                "allowBlobPublicAccess": false,
+                "allowSharedKeyAccess": true,
+                "networkAcls": {
+                    "resourceAccessRules": [],
+                    "bypass": "AzureServices",
+                    "virtualNetworkRules":  [
+                        {
+                            "id": "[concat(resourceId('Microsoft.Network/virtualNetworks', parameters('coc-soc-vnet_name')), '/subnets/soc-subnet01')]",
+                            "action": "Allow",
+                            "state": "Succeeded"
+                        }
+                    ],
+                    "ipRules": [],
+                    "defaultAction": "Deny"
+                },
+                "supportsHttpsTrafficOnly": true,
+                "encryption": {
+                    "requireInfrastructureEncryption": false,
+                    "services": {
+                        "file": {
+                            "keyType": "Account",
+                            "enabled": true
+                        },
+                        "blob": {
+                            "keyType": "Account",
+                            "enabled": true
+                        }
+                    },
+                    "keySource": "Microsoft.Storage"
+                },
+                "accessTier": "Hot"
+            }
+        },
+        {
+            "type": "Microsoft.Automation/automationAccounts/runbooks",
+            "apiVersion": "2022-08-08",
+            "name": "[concat(parameters('coc-soc-automationAccount_name'), '/Copy-VmDigitalEvidenceWin')]",
+            "location": "[parameters('coc-soc-Location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Automation/automationAccounts', parameters('coc-soc-automationAccount_name'))]",
+                "[resourceId('Microsoft.Compute/virtualMachines', parameters('coc-soc-HRW_VM_name'))]"
+            ],
+            "properties": {
+                "runbookType": "PowerShell",
+                "logVerbose": false,
+                "logProgress": false,
+                "logActivityTrace": 0,
+                "description": "This version is for Windows Hybrid Runbook Worker",
+                 "publishContentLink": {
+                    "uri": "https://raw.githubusercontent.com/Azure/forensics/main/.runbook/Copy-VmDigitalEvidenceWin_v21.ps1",
+                    "version": "2.1.0.0"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachines",
+            "apiVersion": "2023-03-01",
+            "name": "[parameters('coc-soc-HRW_VM_name')]",
+            "location": "[parameters('coc-soc-Location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkInterfaces', variables('networkInterfaces_coc_hrw_nic_name'))]"
+            ],
+            "identity": {
+                "type": "SystemAssigned"
+            },
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "Standard_D8s_v3"
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "MicrosoftWindowsServer",
+                        "offer": "WindowsServer",
+                        "sku": "2022-datacenter-azure-edition",
+                        "version": "latest"
+                    },
+                    "osDisk": {
+                        "createOption": "fromImage",
+                        "name": "[concat(parameters('coc-soc-HRW_VM_name'), '-osdisk')]",
+                        "managedDisk": {
+                            "storageAccountType": "[parameters('coc-soc-storageAccount_Type')]"
+                        },
+                        "deleteOption": "Delete"
+                    },
+                    "diskControllerType": "SCSI"
+                },
+                "osProfile": {
+                    "computerName": "[parameters('coc-soc-HRW_VM_name')]",
+                    "adminUsername": "[parameters('coc-soc-HRW_adminUsername')]",
+                    "adminPassword": "[parameters('coc-soc-HRW_adminPassword')]",
+                    "windowsConfiguration": {
+                        "provisionVMAgent": true,
+                        "enableAutomaticUpdates": true,
+                        "patchSettings": {
+                            "patchMode": "AutomaticByOS",
+                            "enableHotpatching": false
+                        }
+                    }
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('networkInterfaces_coc_hrw_nic_name'))]",
+                            "properties": {
+                                "deleteOption": "Delete"
+                            }
+                        }
+                    ]
+                },
+                "diagnosticsProfile": {
+                    "bootDiagnostics": {
+                        "enabled": true
+                    }
+                },
+                "licenseType": "Windows_Server"
+            }
+        },
+
+        {
+        "type": "Microsoft.Compute/virtualMachines/extensions",
+        "apiVersion": "2022-03-01",
+        "name": "[concat(parameters('coc-soc-HRW_VM_name'), '/RunPowerShellScript')]",
+        "location": "[resourceGroup().location]",
+        "dependsOn": [
+            "[resourceId('Microsoft.Compute/virtualMachines', parameters('coc-soc-HRW_VM_name'))]",
+            "[resourceID('Microsoft.Storage/storageAccounts', parameters('coc-soc-storageAccount_name'))]"
+        ],
+        "properties": {
+            "publisher": "Microsoft.Compute",
+            "type": "CustomScriptExtension",
+            "typeHandlerVersion": "1.10",
+            "autoUpgradeMinorVersion": true,
+            "settings": {
+                "fileUris": [
+                    "https://raw.githubusercontent.com/Azure/forensics/main/.powershell/soc-hrw.ps1"
+                ],
+                "commandToExecute": "[concat(' start powershell -ExecutionPolicy Unrestricted -File soc-hrw.ps1 -regionCode ', parameters('coc-soc-Location') ,' -StorageAccountResourceID ', resourceId('Microsoft.Storage/storageAccounts', parameters('coc-soc-storageAccount_name')), ' -HRWIdentity ', reference(resourceId('Microsoft.Compute/virtualMachines', parameters('coc-soc-HRW_VM_name')), '2023-03-01', 'full').identity.principalId)]"
+            }
+        }
+        },
+
+
+        {
+            "type": "Microsoft.Network/virtualNetworks/subnets",
+            "apiVersion": "2023-04-01",
+            "name": "[concat(parameters('coc-soc-vnet_name'), '/soc-subnet01')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', parameters('coc-soc-vnet_name'))]",
+                "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('coc-soc-nsg_name'))]"
+            ],
+            "properties": {
+                "addressPrefix": "172.16.0.0/24",
+                "networkSecurityGroup": {
+                    "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('coc-soc-nsg_name'))]"
+                },
+                "serviceEndpoints":  [
+                    {
+                        "service": "Microsoft.Storage",
+                        "locations": [
+                             "[parameters('coc-soc-Location')]"
+                        ]
+                    },
+                    {
+                        "service": "Microsoft.KeyVault",
+                        "locations": [
+                            "[parameters('coc-soc-Location')]"
+                        ]
+                    }
+                ],
+                "delegations": [],
+                "privateEndpointNetworkPolicies": "Disabled",
+                "privateLinkServiceNetworkPolicies": "Enabled"
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts/blobServices",
+            "apiVersion": "2023-01-01",
+            "name": "[concat(parameters('coc-soc-storageAccount_name'), '/default')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('coc-soc-storageAccount_name'))]"
+            ],
+            "sku": {
+                "name": "Standard_LRS",
+                "tier": "Standard"
+            },
+            "properties": {
+                "cors": {
+                    "corsRules": []
+                },
+                "deleteRetentionPolicy": {
+                    "allowPermanentDelete": false,
+                    "enabled": true,
+                    "days": 7
+                },
+                "isVersioningEnabled": true,
+                "changeFeed": {
+                    "enabled": false
+                },
+                "restorePolicy": {
+                    "enabled": false
+                },
+                "containerDeleteRetentionPolicy": {
+                    "enabled": true,
+                    "days": 7
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts/fileServices",
+            "apiVersion": "2023-01-01",
+            "name": "[concat(parameters('coc-soc-storageAccount_name'), '/default')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('coc-soc-storageAccount_name'))]"
+            ],
+            "sku": {
+                "name": "Standard_LRS",
+                "tier": "Standard"
+            },
+            "properties": {
+                "shareDeleteRetentionPolicy": {
+                    "enabled": true,
+                    "days": 7
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts/queueServices",
+            "apiVersion": "2023-01-01",
+            "name": "[concat(parameters('coc-soc-storageAccount_name'), '/default')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('coc-soc-storageAccount_name'))]"
+            ],
+            "properties": {
+                "cors": {
+                    "corsRules": []
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts/tableServices",
+            "apiVersion": "2023-01-01",
+            "name": "[concat(parameters('coc-soc-storageAccount_name'), '/default')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('coc-soc-storageAccount_name'))]"
+            ],
+            "properties": {
+                "cors": {
+                    "corsRules": []
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "2023-04-01",
+            "name": "[variables('networkInterfaces_coc_hrw_nic_name')]",
+            "location": "[parameters('coc-soc-Location')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPAddresses_CoC_HRW_VM_ip_name'))]",
+                "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('coc-soc-vnet_name'), 'soc-subnet01')]"
+            ],
+			"properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "subnet": {
+                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('coc-soc-vnet_name'), 'soc-subnet01')]"
+                            },
+                            "privateIPAllocationMethod": "Dynamic",
+                            "publicIpAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPAddresses_CoC_HRW_VM_ip_name'))]",
+                                "properties": {
+                                    "deleteOption": "Delete"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "enableAcceleratedNetworking": true
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+            "apiVersion": "2023-01-01",
+            "name": "[concat(parameters('coc-soc-storageAccount_name'), '/default/immutable')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices', parameters('coc-soc-storageAccount_name'), 'default')]",
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('coc-soc-storageAccount_name'))]"
+            ],
+            "properties": {
+                "immutableStorageWithVersioning": {
+                    "enabled": false
+                },
+                "defaultEncryptionScope": "$account-encryption-key",
+                "denyEncryptionScopeOverride": false,
+                "publicAccess": "None"
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts/fileServices/shares",
+            "apiVersion": "2023-01-01",
+            "name": "[concat(parameters('coc-soc-storageAccount_name'), '/default/hash')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/fileServices', parameters('coc-soc-storageAccount_name'), 'default')]",
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('coc-soc-storageAccount_name'))]"
+            ],
+            "properties": {
+                "accessTier": "Hot",
+                "shareQuota": 5120,
+                "enabledProtocols": "SMB"
+            }
+        },
+        {
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "apiVersion": "2023-04-01",
+            "name": "[parameters('coc-soc-nsg_name')]",
+            "location": "[parameters('coc-soc-Location')]",
+            "properties": {
+                "securityRules": [
+                    {
+                        "name": "AllowAnyRDPInbound",
+                        "id": "[resourceId('Microsoft.Network/networkSecurityGroups/securityRules', parameters('coc-soc-nsg_name'), 'AllowAnyRDPInbound')]",
+                        "type": "Microsoft.Network/networkSecurityGroups/securityRules",
+                        "properties": {
+                            "protocol": "TCP",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "3389",
+                            "sourceAddressPrefix": "*",
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 100,
+                            "direction": "Inbound",
+                            "sourcePortRanges": [],
+                            "destinationPortRanges": [],
+                            "sourceAddressPrefixes": [],
+                            "destinationAddressPrefixes": []
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.Network/networkSecurityGroups/securityRules",
+            "apiVersion": "2023-04-01",
+            "name": "[concat(parameters('coc-soc-nsg_name'), '/AllowAnyRDPInbound')]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('coc-soc-nsg_name'))]"
+            ],
+            "properties": {
+                "protocol": "TCP",
+                "sourcePortRange": "*",
+                "destinationPortRange": "3389",
+                "sourceAddressPrefix": "*",
+                "destinationAddressPrefix": "*",
+                "access": "Allow",
+                "priority": 100,
+                "direction": "Inbound",
+                "sourcePortRanges": [],
+                "destinationPortRanges": [],
+                "sourceAddressPrefixes": [],
+                "destinationAddressPrefixes": []
+            }
+        },
+        {
+            "type": "Microsoft.Insights/diagnosticSettings",
+             "apiVersion": "2021-05-01-preview",
+              "scope": "[resourceId('Microsoft.Storage/storageAccounts/blobServices', parameters('coc-soc-storageAccount_name'), 'default')]",
+              "name": "diagnostic",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('coc-soc-storageAccount_name'))]"
+            ],
+              "properties": {
+                "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('coc-soc-LogAnWks_name'))]",
+                "logs": [
+                  {
+                    "category": "StorageRead",
+                    "enabled": true
+                  },
+                  {
+                    "category": "StorageWrite",
+                    "enabled": true
+                  },
+                  {
+                    "category": "StorageDelete",
+                    "enabled": true
+                  }
+                ]
+              }
+        },
+        {
+            "type": "Microsoft.Insights/diagnosticSettings",
+            "apiVersion": "2021-05-01-preview",
+            "scope": "[resourceId('Microsoft.Storage/storageAccounts/fileServices', parameters('coc-soc-storageAccount_name'), 'default')]",
+            "name": "diagnostic",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('coc-soc-storageAccount_name'))]"
+            ],
+            "properties": {
+              "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('coc-soc-LogAnWks_name'))]",
+              "logs": [
+                {
+                  "category": "StorageRead",
+                  "enabled": true
+                },
+                {
+                  "category": "StorageWrite",
+                  "enabled": true
+                },
+                {
+                  "category": "StorageDelete",
+                  "enabled": true
+                }
+              ]
+            }
+        },
+        {
+            "type": "Microsoft.Insights/diagnosticSettings",
+            "apiVersion": "2021-05-01-preview",
+            "scope": "[resourceId('Microsoft.KeyVault/vaults', parameters('coc-soc-keyvault_name'))]",
+            "name": "diagnostic",
+            "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', parameters('coc-soc-keyvault_name'))]"
+            ],
+            "properties": {
+              "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('coc-soc-LogAnWks_name'))]",
+              "logs": [
+                {
+                  "category": "AuditEvent",
+                  "enabled": true
+                },
+                {
+                  "category": "AzurePolicyEvaluationDetails",
+                  "enabled": true
+                }
+              ]
+            }
+        },
+        {
+            "type": "Microsoft.Authorization/roleAssignments",
+            "apiVersion": "2022-04-01",
+            "name": "[guid('SecretOfficerOnKeyVault', variables('UniqueStringBasedOnTimeStamp'))]",
+            "scope": "[resourceId('Microsoft.KeyVault/vaults', parameters('coc-soc-keyvault_name'))]",
+            "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', parameters('coc-soc-keyvault_name'))]",
+                "[resourceId('Microsoft.Automation/automationAccounts', parameters('coc-soc-automationAccount_name'))]"
+            ],
+            "properties": {
+                "roleDefinitionId": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', 'b86a8fe4-44ce-4948-aee5-eccb2c155cd7')]",
+                "principalId": "[reference(resourceId('Microsoft.Automation/automationAccounts', parameters('coc-soc-automationAccount_name')), '2022-08-08', 'full').identity.principalId]",
+                "principalType": "ServicePrincipal"
+            }
+        },
+        {
+            "type": "Microsoft.Authorization/roleAssignments",
+            "apiVersion": "2022-04-01",
+            "name": "[guid('CryptoOfficerOnKeyVault', variables('UniqueStringBasedOnTimeStamp'))]",
+            "scope": "[resourceId('Microsoft.KeyVault/vaults', parameters('coc-soc-keyvault_name'))]",
+            "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', parameters('coc-soc-keyvault_name'))]",
+                "[resourceId('Microsoft.Automation/automationAccounts', parameters('coc-soc-automationAccount_name'))]"
+            ],
+            "properties": {
+                "roleDefinitionId": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', '14b46e9e-c2b7-41b4-b07b-48a6ebf60603')]",
+                "principalId": "[reference(resourceId('Microsoft.Automation/automationAccounts', parameters('coc-soc-automationAccount_name')), '2022-08-08', 'full').identity.principalId]",
+                "principalType": "ServicePrincipal"
+            }
+        },
+        {
+            "type": "Microsoft.Authorization/roleAssignments",
+            "apiVersion": "2022-04-01",
+            "name": "[guid('SAcontributorOnStorageAccount', variables('UniqueStringBasedOnTimeStamp'))]",
+            "scope": "[resourceId('Microsoft.Storage/storageAccounts', parameters('coc-soc-storageAccount_name'))]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('coc-soc-storageAccount_name'))]",
+                "[resourceId('Microsoft.Automation/automationAccounts', parameters('coc-soc-automationAccount_name'))]"
+            ],
+            "properties": {
+                "roleDefinitionId": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', '17d1049b-9a84-46fb-8f53-869881c3d3ab')]",
+                "principalId": "[reference(resourceId('Microsoft.Automation/automationAccounts', parameters('coc-soc-automationAccount_name')), '2022-08-08', 'full').identity.principalId]",
+                "principalType": "ServicePrincipal"
+            }
+        },
+
+
+         // Temporary role needed only in LAB to run the script that assigns LegalHolding Access Policy to the immutable container of the Storage Account
+        {
+            "type": "Microsoft.Authorization/roleAssignments",
+            "apiVersion": "2022-04-01",
+            "name": "[guid('OwnerOnStorageAccount-VMidentity', variables('UniqueStringBasedOnTimeStamp'))]",
+            "scope": "[resourceId('Microsoft.Storage/storageAccounts', parameters('coc-soc-storageAccount_name'))]",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('coc-soc-storageAccount_name'))]",
+                "[resourceId('Microsoft.Compute/virtualMachines', parameters('coc-soc-HRW_VM_name'))]"
+            ],
+            "properties": {
+                "roleDefinitionId": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', '8e3af657-a8ff-443c-a75c-2fe8c4bcb635')]",
+                "principalId": "[reference(resourceId('Microsoft.Compute/virtualMachines', parameters('coc-soc-HRW_VM_name')), '2023-03-01', 'full').identity.principalId]",
+                "principalType": "ServicePrincipal"
+            }
+        }
+    ],
+
+    "outputs": {
+        "CoC_SOC_Automation_IdentityPrincipalID": {
+            "type": "string",
+            "value": "[reference(resourceId('Microsoft.Automation/automationAccounts', parameters('coc-soc-automationAccount_name')), '2022-08-08', 'full').identity.principalId]"
+        },
+
+        "CoC_SOC_HRW_PIP": {
+            "type": "string",
+            "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPAddresses_CoC_HRW_VM_ip_name')), '2023-04-01', 'full').properties.ipAddress]"
+        }
+    }
+}

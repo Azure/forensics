@@ -1,0 +1,292 @@
+
+{
+  "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "coc-Location": {
+      "type": "string",
+      "defaultValue": "westeurope",
+      "metadata": {
+        "description": "Location for all CoC resources."
+      }
+    },
+    
+
+    "coc-prod-rg_name": {
+      "type": "string",
+      "defaultValue": "CoC-Production",
+      "metadata": {
+        "description": "Name of the resource group dedicated to Production resources."
+      }
+    },
+    "coc-prod-vnet_name": {
+        "metadata": {
+            "description": "Name of the virtual network."
+        },
+        "defaultValue": "CoC-Production-vnet",
+        "type": "String"
+    },
+    "coc-prod-nsg_name": {
+        "metadata": {
+            "description": "Name of the network security group."
+        },
+        "defaultValue": "CoC-Production-vnet-server-nsg",
+        "type": "String"
+    },
+    "coc-prod-keyvault_name": {
+        "metadata": {
+            "description": "Name of the key vault."
+        },
+        "defaultValue": "CoC-Prod-KV-<UNIQUESTRING>",
+        "type": "String"
+    },
+    "coc-prod-VM01_name": {
+        "metadata": {
+            "description": "Name of the virtual machine."
+        },
+        "defaultValue": "CoC-Prod-VM01",
+        "type": "String"
+    },
+    "coc-prod-VM01_adminUsername": {
+        "metadata": {
+            "description": "Admin username for virtual machine"
+        },
+        "defaultValue": "cocprodadmin",
+        "type": "string"
+    },
+    "coc-prod-VM01_adminPassword": {
+        "metadata": {
+            "description": "Admin password for the virtual machine"
+        },
+        "type": "secureString"
+    },
+
+
+    "coc-soc-rg_name": {
+      "type": "string",
+      "defaultValue": "CoC-SOC",
+      "metadata": {
+        "description": "Name of the resource group dedicated to SOC resources."
+      }
+    },
+
+    "coc-soc-vnet_name": {
+        "metadata": {
+            "description": "Name of the VNET resource for the SOC"
+        },
+        "type": "String",
+        "defaultValue": "CoC-SOC-vnet"
+    },
+    "coc-soc-nsg_name": {
+        "metadata": {
+            "description": "Name of the NSG resource for the SOC"
+        },
+        "defaultValue": "CoC-SOC-vnet-soc-subnet01-nsg",
+        "type": "String"
+    },
+    "coc-soc-keyvault_name": {
+        "metadata": {
+            "description": "UNIQUE name of the Key Vault resource for the SOC"
+        },
+        "type": "String",
+        "defaultValue": "CoC-SOC-KV-<UNIQUESTRING>"
+    },
+    "coc-soc-storageAccount_name": {
+        "metadata": {
+            "description": "UNIQUE name of the Storage Account resource for the SOC"
+        },
+        "type": "String",
+        "defaultValue": "cocsocstorage<UNIQUESTRING>"
+    },
+    "coc-soc-LogAnWks_name": {
+        "metadata": {
+            "description": "UNIQUE name of the Log Analytics Workspace resource for the SOC"
+        },
+        "type": "String",
+        "defaultValue": "CoC-SOC-LA-<UNIQUESTRING>"
+    },
+    "coc-soc-automationAccount_name": {
+        "metadata": {
+            "description": "Name of the Automation Account resource for the SOC"
+        },
+        "type": "String",
+        "defaultValue": "CoC-SOC-AA-<UNIQUESTRING>"
+    },
+    "coc-soc-workerGroupName": {
+        "metadata": {
+            "description": "Name of the Hybrid Runbook Worker Group"
+        },
+        "defaultValue": "CoC-HRW-Windows",
+        "type": "string"
+    },
+    "coc-soc-HRW_VM_name": {
+        "metadata": {
+            "description": "Name of the Hybrid Runbook Worker VM resource for the SOC"
+        },
+        "type": "String",
+        "defaultValue": "CoC-SOC-HRW"
+    },
+    "coc-soc-HRW_adminUsername": {
+        "metadata": {
+            "description": "Admin username for the Hybrid Runbook Worker VM"
+        },
+        "defaultValue": "cocsocadmin",
+        "type": "string"
+    },
+    "coc-soc-HRW_adminPassword": {
+        "metadata": {
+            "description": "Admin password for the Hybrid Runbook Worker VM"
+        },
+        "type": "secureString"
+    }
+
+
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/resourceGroups",
+      "apiVersion": "2020-06-01",
+      "name": "[parameters('coc-soc-rg_name')]",
+      "location": "[parameters('coc-Location')]",
+      "properties": {}
+    },
+    {
+      "type": "Microsoft.Resources/resourceGroups",
+      "apiVersion": "2020-06-01",
+      "name": "[parameters('coc-prod-rg_name')]",
+      "location": "[parameters('coc-Location')]",
+      "properties": {}
+    },
+    {
+      "apiVersion": "2019-10-01",
+      "name": "CoC-PROD-nestedDeployment",
+      "type": "Microsoft.Resources/deployments",
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/resourceGroups/', parameters('coc-prod-rg_name'))]"
+      ],
+      "resourceGroup": "[parameters('coc-prod-rg_name')]",
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "https://raw.githubusercontent.com/Azure/forensics/main/.armtemplate/coc-production.json",
+          "contentVersion": "1.0.0.0"
+      },
+      "parameters": {
+          "location": {
+              "value": "[reference(resourceId('Microsoft.Resources/resourceGroups/', parameters('coc-prod-rg_name')),'2019-10-01','Full').location]"
+          },
+          "virtualMachines_CoC_Prod_VM01_name": {
+              "value": "[parameters('coc-prod-VM01_name')]"
+          },
+          "adminUsername": {
+              "value": "[parameters('coc-prod-VM01_adminUsername')]"
+          },
+          "adminPassword": {
+              "value": "[parameters('coc-prod-VM01_adminPassword')]"
+          },
+          "vaults_CoC_Production_keyvault_name": {
+              "value": "[parameters('coc-prod-keyvault_name')]"
+          },
+          "virtualNetworks_CoC_Production_vnet_name": {
+              "value": "[parameters('coc-prod-vnet_name')]"
+          },
+          "networkSecurityGroups_CoC_Production_vnet_server_nsg_name": {
+              "value": "[parameters('coc-prod-nsg_name')]"
+          }
+        }
+      }
+    },
+
+    {
+      "apiVersion": "2019-10-01",
+      "name": "CoC-SOC-nestedDeployment",
+      "type": "Microsoft.Resources/deployments",
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/resourceGroups/', parameters('coc-soc-rg_name'))]",
+        "[resourceId('Microsoft.Resources/resourceGroups/', parameters('coc-prod-rg_name'))]"
+      ],
+      "resourceGroup": "[parameters('coc-soc-rg_name')]",
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "https://raw.githubusercontent.com/Azure/forensics/main/.armtemplate/coc-soc.json",
+          "contentVersion": "1.0.0.0"
+        },
+      "parameters": {
+          "coc-soc-location": {
+              "value": "[reference(resourceId('Microsoft.Resources/resourceGroups/', parameters('coc-prod-rg_name')),'2019-10-01','Full').location]"
+          },
+          "coc-soc-HRW_VM_name": {
+              "value": "[parameters('coc-soc-HRW_VM_name')]"
+          },
+          "coc-soc-vnet_name": {
+              "value": "[parameters('coc-soc-vnet_name')]"
+          },
+          "coc-soc-storageAccount_name": {
+              "value": "[parameters('coc-soc-storageAccount_name')]"
+          },
+          "coc-soc-keyvault_name": {
+              "value": "[parameters('coc-soc-keyvault_name')]"
+          },
+          "coc-soc-LogAnWks_name": {
+              "value": "[parameters('coc-soc-LogAnWks_name')]"
+          },
+          "coc-soc-automationAccount_name": {
+              "value":  "[parameters('coc-soc-automationAccount_name')]"
+          },
+          "coc-soc-nsg_name":{
+              "value": "[parameters('coc-soc-nsg_name')]"
+          },
+          "coc-soc-HRW_adminUsername": {
+              "value": "[parameters('coc-soc-HRW_adminUsername')]"
+          },
+          "coc-soc-HRW_adminPassword": {
+              "value": "[parameters('coc-soc-HRW_adminPassword')]"
+          },
+          "coc-soc-storageAccount_Type": {
+              "value": "StandardSSD_LRS"
+          },
+          "coc-soc-workerGroupName": {
+              "value": "[parameters('coc-soc-workerGroupName')]"
+          }
+        }
+      }
+    },
+     {
+      "apiVersion": "2019-10-01",
+      "name": "CoC-roles-nestedDeployment",
+      "type": "Microsoft.Resources/deployments",
+      "dependsOn": [
+        "CoC-SOC-nestedDeployment"
+      ],
+      "resourceGroup": "[parameters('coc-prod-rg_name')]",
+      "properties": {
+        "mode": "Incremental",
+        "templateLink": {
+          "uri": "https://raw.githubusercontent.com/Azure/forensics/main/.armtemplate/coc-roles.json",
+          "contentVersion": "1.0.0.0"
+      },
+      "parameters": {
+          "IdentityPrincipalID": {
+              "value": "[reference('CoC-SOC-nestedDeployment').outputs.CoC_SOC_Automation_IdentityPrincipalID.value]"
+          }
+        }
+      }
+    }
+
+  ],
+
+
+  "outputs": {
+    "CoC_SOC_Automation_IdentityPrincipalID": {
+      "type": "string",
+      "value": "[reference('CoC-SOC-nestedDeployment').outputs.CoC_SOC_Automation_IdentityPrincipalID.value]"
+    },
+
+    "CoC_SOC_HRW_PIP": {
+      "type": "string",
+      "value": "[reference('CoC-SOC-nestedDeployment').outputs.CoC_SOC_HRW_PIP.value]"
+    }
+    
+  }
+}
