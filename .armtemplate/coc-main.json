@@ -263,7 +263,7 @@
       "properties": {
         "mode": "Incremental",
         "templateLink": {
-          "uri": "https://raw.githubusercontent.com/Azure/forensics/main/.armtemplate/coc-roles.json",
+          "uri": "https://raw.githubusercontent.com/freakfactor10/coc-forensics/refs/heads/main/.armtemplate/coc-roles.json",
           "contentVersion": "1.0.0.0"
       },
       "parameters": {
