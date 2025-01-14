@@ -437,7 +437,7 @@
                 "logActivityTrace": 0,
                 "description": "This version is for Windows Hybrid Runbook Worker",
                  "publishContentLink": {
-                    "uri": "https://raw.githubusercontent.com/Azure/forensics/main/.runbook/Copy-VmDigitalEvidenceWin_v21.ps1",
+                    "uri": "hhttps://raw.githubusercontent.com/freakfactor10/coc-forensics/refs/heads/main/.runbook/Copy-VmDigitalEvidenceWin_v21.ps1",
                     "version": "2.1.0.0"
                 }
             }
