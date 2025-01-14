@@ -168,7 +168,7 @@
       "properties": {
         "mode": "Incremental",
         "templateLink": {
-          "uri": "https://raw.githubusercontent.com/Azure/forensics/main/.armtemplate/coc-production.json",
+          "uri": "https://raw.githubusercontent.com/freakfactor10/coc-forensics/refs/heads/main/.armtemplate/coc-production.json",
           "contentVersion": "1.0.0.0"
       },
       "parameters": {
@@ -209,7 +209,7 @@
       "properties": {
         "mode": "Incremental",
         "templateLink": {
-          "uri": "https://raw.githubusercontent.com/Azure/forensics/main/.armtemplate/coc-soc.json",
+          "uri": "https://raw.githubusercontent.com/freakfactor10/coc-forensics/refs/heads/main/.armtemplate/coc-soc.json",
           "contentVersion": "1.0.0.0"
         },
       "parameters": {
