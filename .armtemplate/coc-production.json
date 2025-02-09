@@ -74,7 +74,7 @@
     "resources": [
         {
             "type": "Microsoft.KeyVault/vaults",
-            "apiVersion": "2023-02-01",
+            "apiVersion": "2024-12-01-preview",
             "name": "[parameters('vaults_CoC_Production_keyvault_name')]",
             "location": "[parameters('location')]",
             "properties": {
@@ -98,7 +98,7 @@
         },
         {
             "type": "Microsoft.Network/networkSecurityGroups",
-            "apiVersion": "2022-11-01",
+            "apiVersion": "2024-05-01",
             "name": "[parameters('networkSecurityGroups_CoC_Production_vnet_server_nsg_name')]",
             "location": "[parameters('location')]",
             "properties": {
@@ -127,7 +127,7 @@
         },
         {
             "type": "Microsoft.Network/publicIPAddresses",
-            "apiVersion": "2022-11-01",
+            "apiVersion": "2024-05-01",
             "name": "[variables('publicIPAddresses_CoC_HRW_VM_ip_name')]",
             "location": "[parameters('location')]",
             "sku": {
@@ -143,7 +143,7 @@
         },
         {
             "type": "Microsoft.Compute/virtualMachines",
-            "apiVersion": "2023-03-01",
+            "apiVersion": "2024-07-01",
             "name": "[parameters('virtualMachines_CoC_Prod_VM01_name')]",
             "location": "[parameters('location')]",
             "dependsOn": [
@@ -161,7 +161,7 @@
                     "imageReference": {
                         "publisher": "MicrosoftWindowsServer",
                         "offer": "WindowsServer",
-                        "sku": "2022-datacenter-azure-edition",
+                        "sku": "2025-datacenter-azure-edition",
                         "version": "latest"
                     },
                     "osDisk": {
@@ -252,7 +252,7 @@
 
         {
         "type": "Microsoft.Compute/virtualMachines/extensions",
-        "apiVersion": "2022-03-01",
+        "apiVersion": "2024-07-01",
         "name": "[concat(parameters('virtualMachines_CoC_Prod_VM01_name'), '/RunPowerShellScript')]",
         "location": "[resourceGroup().location]",
         "dependsOn": [
@@ -267,14 +267,14 @@
                 "fileUris": [
                     "https://raw.githubusercontent.com/Azure/forensics/main/.powershell/prod-vm.ps1"
                 ],
-                "commandToExecute": "[concat(' start powershell -ExecutionPolicy Unrestricted -File prod-vm.ps1 -CoCProdKeyvaultName ', parameters('vaults_CoC_Production_keyvault_name'), ' -CoCProdRGName ', resourceGroup().name, ' -CoCProdVMName ', parameters('virtualMachines_CoC_Prod_VM01_name'), ' -VMIdentity ', reference(resourceId('Microsoft.Compute/virtualMachines', parameters('virtualMachines_CoC_Prod_VM01_name')), '2023-03-01', 'full').identity.principalId)]"
+                "commandToExecute": "[concat(' start powershell -ExecutionPolicy Unrestricted -File prod-vm.ps1 -CoCProdKeyvaultName ', parameters('vaults_CoC_Production_keyvault_name'), ' -CoCProdRGName ', resourceGroup().name, ' -CoCProdVMName ', parameters('virtualMachines_CoC_Prod_VM01_name'), ' -VMIdentity ', reference(resourceId('Microsoft.Compute/virtualMachines', parameters('virtualMachines_CoC_Prod_VM01_name')), '2024-07-01', 'full').identity.principalId)]"
             }
         }
         },
 
         {
             "type": "Microsoft.Network/virtualNetworks",
-            "apiVersion": "2022-11-01",
+            "apiVersion": "2024-05-01",
             "name": "[parameters('virtualNetworks_CoC_Production_vnet_name')]",
             "location": "[parameters('location')]",
             "dependsOn": [
@@ -312,7 +312,7 @@
         },
         {
             "type": "Microsoft.Network/networkInterfaces",
-            "apiVersion": "2022-11-01",
+            "apiVersion": "2024-05-01",
             "name": "[variables('networkInterfaces_coc_prod_nic_name')]",
             "location": "[parameters('location')]",
             "dependsOn": [
@@ -359,7 +359,7 @@
         },
         {
             "type": "Microsoft.Network/virtualNetworks/subnets",
-            "apiVersion": "2022-11-01",
+            "apiVersion": "2024-05-01",
             "name": "[concat(parameters('virtualNetworks_CoC_Production_vnet_name'), '/server')]",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/virtualNetworks', parameters('virtualNetworks_CoC_Production_vnet_name'))]",
@@ -386,7 +386,7 @@
             ],
             "properties": {
                 "roleDefinitionId": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', '8e3af657-a8ff-443c-a75c-2fe8c4bcb635')]",
-                "principalId": "[reference(resourceId('Microsoft.Compute/virtualMachines', parameters('virtualMachines_CoC_Prod_VM01_name')), '2023-03-01', 'full').identity.principalId]",
+                "principalId": "[reference(resourceId('Microsoft.Compute/virtualMachines', parameters('virtualMachines_CoC_Prod_VM01_name')), '2024-07-01', 'full').identity.principalId]",
                 "principalType": "ServicePrincipal"
             }
         }

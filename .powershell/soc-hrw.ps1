@@ -80,7 +80,7 @@ $BodyJson = '{
     ]
 }' 
 
-$uri = "https://management.azure.com/subscriptions/$subscriptionID/resourceGroups/$resourceGroupName/providers/Microsoft.Storage/storageAccounts/$storageAccountName/blobServices/default/containers/$containerName/setLegalHold?api-version=2023-01-01"
+$uri = "https://management.azure.com/subscriptions/$subscriptionID/resourceGroups/$resourceGroupName/providers/Microsoft.Storage/storageAccounts/$storageAccountName/blobServices/default/containers/$containerName/setLegalHold?api-version=2023-05-01"
 
 
 $setLegalHoldPolicy = Invoke-WebRequest -Uri $Uri -Headers $Header -Method 'POST' -ContentType "application/json" -Body $BodyJson  -UseBasicParsing

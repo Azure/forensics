@@ -56,12 +56,12 @@ The LAB environment represents a simplified version of the architecture describe
 
 The Production resource group contains:
 1. A **virtual network** containing a subnet and network security group for subnet protection.
-1. A **Windows Server 2022 VM** featuring a public IP address, an OS disk, and two data disks configured with Azure Disk Encryption (ADE).
+1. A **Windows Server 2025 VM** featuring a public IP address, an OS disk, and two data disks configured with Azure Disk Encryption (ADE).
 1. A **key vault** designed to store the BEK keys of the encrypted disks.
 
 The SOC resource group contains:
 1. A **virtual network** with a subnet and network security group for subnet protection.
-1. A **Windows Server 2022 VM** functioning as a Hybrid RunBook Worker (HRW). The HRW is automatically configured with the necessary PowerShell modules for executing the Chain of Custody process.
+1. A **Windows Server 2025 VM** functioning as a Hybrid RunBook Worker (HRW). The HRW is automatically configured with the necessary PowerShell modules for executing the Chain of Custody process.
 1. A **storage account** for storing the digital evidence with:
     1. a blob container named *immutable* automatically configured with the [Legal Hold](https://docs.microsoft.com/en-us/azure/storage/blobs/storage-blob-immutability-policies-overview) feature
     1. a file share named *hash* used for calculating digital evidence hashes.
