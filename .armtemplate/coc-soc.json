@@ -105,7 +105,7 @@
     "resources": [
         {
             "type": "Microsoft.Automation/automationAccounts",
-            "apiVersion": "2024-10-23",
+            "apiVersion": "2023-11-01",
             "name": "[parameters('coc-soc-automationAccount_name')]",
             "location": "[parameters('coc-soc-Location')]",
             "identity": {
@@ -126,7 +126,7 @@
                 {
                 "name": "[parameters('coc-soc-workerGroupName')]",
                 "type": "hybridRunbookWorkerGroups",
-                "apiVersion": "2024-10-23",
+                "apiVersion": "2023-11-01",
                 "dependsOn": [
                     "[resourceId('Microsoft.Automation/automationAccounts', parameters('coc-soc-automationAccount_name'))]",
                     "[resourceId('Microsoft.Compute/virtualMachines', parameters('coc-soc-HRW_VM_name'))]"
@@ -135,7 +135,7 @@
                     {
                     "name": "[guid('testhw', variables('UniqueStringBasedOnTimeStamp'))]",
                     "type": "hybridRunbookWorkers",
-                    "apiVersion": "2024-10-23",
+                    "apiVersion": "2023-11-01",
                     "dependsOn": [
                         "[resourceId('Microsoft.Automation/automationAccounts', parameters('coc-soc-automationAccount_name'))]",
                         "[resourceId('Microsoft.Automation/automationAccounts/hybridRunbookWorkerGroups', parameters('coc-soc-automationAccount_name'),parameters('coc-soc-workerGroupName'))]",
@@ -152,7 +152,7 @@
 
         {
             "type": "Microsoft.Automation/automationAccounts/variables",
-            "apiVersion": "2024-10-23",
+            "apiVersion": "2023-11-01",
             "name": "[concat(parameters('coc-soc-automationAccount_name'), '/destKV')]",
             "dependsOn": [
                 "[resourceId('Microsoft.Automation/automationAccounts', parameters('coc-soc-automationAccount_name'))]",
@@ -166,7 +166,7 @@
         },
         {
             "type": "Microsoft.Automation/automationAccounts/variables",
-            "apiVersion": "2024-10-23",
+            "apiVersion": "2023-11-01",
             "name": "[concat(parameters('coc-soc-automationAccount_name'), '/destRGName')]",
             "dependsOn": [
                 "[resourceId('Microsoft.Automation/automationAccounts', parameters('coc-soc-automationAccount_name'))]",
@@ -180,7 +180,7 @@
         },
         {
             "type": "Microsoft.Automation/automationAccounts/variables",
-            "apiVersion": "2024-10-23",
+            "apiVersion": "2023-11-01",
             "name": "[concat(parameters('coc-soc-automationAccount_name'), '/destSAblob')]",
             "dependsOn": [
                 "[resourceId('Microsoft.Automation/automationAccounts', parameters('coc-soc-automationAccount_name'))]",
@@ -194,7 +194,7 @@
         },
         {
             "type": "Microsoft.Automation/automationAccounts/variables",
-            "apiVersion": "2024-10-23",
+            "apiVersion": "2023-11-01",
             "name": "[concat(parameters('coc-soc-automationAccount_name'), '/destSAfile')]",
             "dependsOn": [
                 "[resourceId('Microsoft.Automation/automationAccounts', parameters('coc-soc-automationAccount_name'))]",
@@ -208,7 +208,7 @@
         },
         {
             "type": "Microsoft.Automation/automationAccounts/variables",
-            "apiVersion": "2024-10-23",
+            "apiVersion": "2023-11-01",
             "name": "[concat(parameters('coc-soc-automationAccount_name'), '/destSubId')]",
             "dependsOn": [
                 "[resourceId('Microsoft.Automation/automationAccounts', parameters('coc-soc-automationAccount_name'))]",
@@ -423,7 +423,7 @@
         },
         {
             "type": "Microsoft.Automation/automationAccounts/runbooks",
-            "apiVersion": "2024-10-23",
+            "apiVersion": "2023-11-01",
             "name": "[concat(parameters('coc-soc-automationAccount_name'), '/Copy-VmDigitalEvidenceWin')]",
             "location": "[parameters('coc-soc-Location')]",
             "dependsOn": [
@@ -482,7 +482,7 @@
                         "provisionVMAgent": true,
                         "enableAutomaticUpdates": true,
                         "patchSettings": {
-                            "patchMode": "AutomaticByOS",
+                            "patchMode": "AutomaticByPlatform",
                             "enableHotpatching": false
                         }
                     }
@@ -896,7 +896,7 @@
     "outputs": {
         "CoC_SOC_Automation_IdentityPrincipalID": {
             "type": "string",
-            "value": "[reference(resourceId('Microsoft.Automation/automationAccounts', parameters('coc-soc-automationAccount_name')), '2024-10-23', 'full').identity.principalId]"
+            "value": "[reference(resourceId('Microsoft.Automation/automationAccounts', parameters('coc-soc-automationAccount_name')), '2023-11-01', 'full').identity.principalId]"
         },
 
         "CoC_SOC_HRW_PIP": {
