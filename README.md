@@ -22,7 +22,7 @@ To initiate the deployment of the LAB environment, verify to have the *Owner* ro
 |-----------|-------------|---------------|
 |Subscription|The subscription where the resource groups will be deployed|Current subscription|
 |Region|The region where the deployment start. NOTE: All the resources will be deployed in the region defined in the *Coc-Location* paramter below||
-|Coc-Location|The region where the resources will be deployed.|westeurope|
+|Coc-Location|The region where the resources will be deployed.|italynorth|
 |Coc-prod-rg_name |The name of the resource group for the Production environment|CoC-Production|
 |Coc-prod-vnet_name |The name of the virtual network for the Production environment|CoC-Production-vnet|
 |Coc-prod-nsg_name |The name of the network security group for the Production environment|CoC-Production-vnet-server-nsg|

@@ -5,7 +5,7 @@
   "parameters": {
     "coc-Location": {
       "type": "string",
-      "defaultValue": "westeurope",
+      "defaultValue": "italynorth",
       "metadata": {
         "description": "Location for all CoC resources."
       }

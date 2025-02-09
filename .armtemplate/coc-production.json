@@ -6,7 +6,7 @@
             "metadata": {
                 "description": "Location for all resources."
             },
-            "defaultValue": "westeurope",
+            "defaultValue": "italynorth",
             "type": "string"
         },
         "virtualMachines_CoC_Prod_VM01_name": {
@@ -47,7 +47,7 @@
             "metadata": {
                 "description": "Name of the network security group."
             },
-            "defaultValue": "CoC-Production-vnet-server-nsg-westeurope",
+            "defaultValue": "CoC-Production-vnet-server-nsg-italynorth",
             "type": "String"
         },
         "storage_Account_Type": {

@@ -6,7 +6,7 @@
             "metadata": {
                 "description": "Location for all resources."
             },
-            "defaultValue": "westeurope",
+            "defaultValue": "italynorth",
             "type": "string"
         },
         "coc-soc-vnet_name": {
