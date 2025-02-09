@@ -757,7 +757,8 @@
               "scope": "[resourceId('Microsoft.Storage/storageAccounts/blobServices', parameters('coc-soc-storageAccount_name'), 'default')]",
               "name": "diagnostic",
             "dependsOn": [
-                "[resourceId('Microsoft.Storage/storageAccounts', parameters('coc-soc-storageAccount_name'))]"
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('coc-soc-storageAccount_name'))]",
+                "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('coc-soc-LogAnWks_name'))]"
             ],
               "properties": {
                 "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('coc-soc-LogAnWks_name'))]",
@@ -783,7 +784,8 @@
             "scope": "[resourceId('Microsoft.Storage/storageAccounts/fileServices', parameters('coc-soc-storageAccount_name'), 'default')]",
             "name": "diagnostic",
             "dependsOn": [
-                "[resourceId('Microsoft.Storage/storageAccounts', parameters('coc-soc-storageAccount_name'))]"
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('coc-soc-storageAccount_name'))]",
+                "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('coc-soc-LogAnWks_name'))]"
             ],
             "properties": {
               "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('coc-soc-LogAnWks_name'))]",
@@ -809,7 +811,8 @@
             "scope": "[resourceId('Microsoft.KeyVault/vaults', parameters('coc-soc-keyvault_name'))]",
             "name": "diagnostic",
             "dependsOn": [
-                "[resourceId('Microsoft.KeyVault/vaults', parameters('coc-soc-keyvault_name'))]"
+                "[resourceId('Microsoft.KeyVault/vaults', parameters('coc-soc-keyvault_name'))]",
+                "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('coc-soc-LogAnWks_name'))]"
             ],
             "properties": {
               "workspaceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('coc-soc-LogAnWks_name'))]",
