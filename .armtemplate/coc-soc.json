@@ -524,7 +524,7 @@
                 "fileUris": [
                     "https://raw.githubusercontent.com/Azure/forensics/main/.powershell/soc-hrw.ps1"
                 ],
-                "commandToExecute": "[concat(' start powershell -ExecutionPolicy Unrestricted -File soc-hrw.ps1 -regionCode ', parameters('coc-soc-Location') ,' -StorageAccountResourceID ', resourceId('Microsoft.Storage/storageAccounts', parameters('coc-soc-storageAccount_name')), ' -HRWIdentity ', reference(resourceId('Microsoft.Compute/virtualMachines', parameters('coc-soc-HRW_VM_name')), '2024-07-01', 'full').identity.principalId)]"
+                "commandToExecute": "[concat('powershell -ExecutionPolicy Unrestricted -File soc-hrw.ps1 -regionCode ', parameters('coc-soc-Location') ,' -StorageAccountResourceID ', resourceId('Microsoft.Storage/storageAccounts', parameters('coc-soc-storageAccount_name')), ' -HRWIdentity ', reference(resourceId('Microsoft.Compute/virtualMachines', parameters('coc-soc-HRW_VM_name')), '2024-07-01', 'full').identity.principalId)]"
             }
         }
         },
