@@ -23,14 +23,14 @@ Write-Output $StorageAccountResourceID
 # Required powershell module for the Hybrid Runbook Worker
     Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
 
-    Install-Module Az.Accounts -requiredVersion 2.12.1 -Repository PSGallery -Scope AllUsers -Force
-    Install-Module Az.Resources -requiredVersion 6.6.0 -Repository PSGallery -Scope AllUsers -Force
-    Install-Module Az.Compute -requiredVersion 5.7.0 -Repository PSGallery -Scope AllUsers -Force
-    Install-Module Az.Storage -requiredVersion 5.5.0 -Repository PSGallery -Scope AllUsers -Force
-    Install-Module Az.KeyVault -requiredVersion 4.9.2 -Repository PSGallery -Scope AllUsers -Force
+    Install-Module Az.Accounts -requiredVersion 5.3.3 -Repository PSGallery -Scope AllUsers -Force
+    Install-Module Az.Resources -requiredVersion 9.0.3 -Repository PSGallery -Scope AllUsers -Force
+    Install-Module Az.Compute -requiredVersion 11.4.0 -Repository PSGallery -Scope AllUsers -Force
+    Install-Module Az.Storage -requiredVersion 9.6.0 -Repository PSGallery -Scope AllUsers -Force
+    Install-Module Az.KeyVault -requiredVersion 6.4.3 -Repository PSGallery -Scope AllUsers -Force
 
     Uninstall-Module Az.Accounts -Force
-    Install-Module Az.Accounts -requiredVersion 2.12.1
+    Install-Module Az.Accounts -requiredVersion 5.3.3
 
 # Set LegalHold Access Policy to the immutable container of the Storage Account
 
@@ -80,7 +80,7 @@ $BodyJson = '{
     ]
 }' 
 
-$uri = "https://management.azure.com/subscriptions/$subscriptionID/resourceGroups/$resourceGroupName/providers/Microsoft.Storage/storageAccounts/$storageAccountName/blobServices/default/containers/$containerName/setLegalHold?api-version=2023-05-01"
+$uri = "https://management.azure.com/subscriptions/$subscriptionID/resourceGroups/$resourceGroupName/providers/Microsoft.Storage/storageAccounts/$storageAccountName/blobServices/default/containers/$containerName/setLegalHold?api-version=2024-01-01"
 
 
 $setLegalHoldPolicy = Invoke-WebRequest -Uri $Uri -Headers $Header -Method 'POST' -ContentType "application/json" -Body $BodyJson  -UseBasicParsing

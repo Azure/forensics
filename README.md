@@ -15,6 +15,10 @@ This guide details the process of deploying the LAB environment for the [Compute
 
 To initiate the deployment of the LAB environment, verify to have the *Owner* role on the subscription then click on the **Deploy to Azure** button provided above. This action will trigger the deployment process within the Azure Portal. You will be prompted to provide the following parameters:
 
+> [!IMPORTANT]
+> The subscription must have the `EncryptionAtHost` feature enabled. Run the following command before deploying:<br>
+> `Register-AzProviderFeature -FeatureName "EncryptionAtHost" -ProviderNamespace "Microsoft.Compute"`
+
 > [!NOTE]
 > For resources such as storage accounts, key vaults, etc., which necessitate globally unique names, kindly replace the \<UNIQUESTRING> placeholder with a unique string of your choice, following the resource's constraints (e.g., maximum character count, lowercase only, etc.).
 
@@ -26,7 +30,6 @@ To initiate the deployment of the LAB environment, verify to have the *Owner* ro
 |Coc-prod-rg_name |The name of the resource group for the Production environment|CoC-Production|
 |Coc-prod-vnet_name |The name of the virtual network for the Production environment|CoC-Production-vnet|
 |Coc-prod-nsg_name |The name of the network security group for the Production environment|CoC-Production-vnet-server-nsg|
-|Coc-prod-keyvault_name |The name of the key vault for the Production environment|CoC-Production-KV-\<UNIQUESTRING>|
 |Coc-prod-VM01_name |The name of the VM for the Production environment|CoC-Prod-VM01|
 |Coc-prod-VM01_adminUsername |The name of the admin user for the VM for the Production environment|cocprodadmin|
 |Coc-prod-VM01_adminPassword|The password of the admin user for the VM for the Production environment||
@@ -52,12 +55,17 @@ To initiate the deployment of the LAB environment, verify to have the *Owner* ro
 ## LAB environment description
 The LAB environment represents a simplified version of the architecture described in the [article](https://learn.microsoft.com/en-us/azure/architecture/example-scenario/forensics/) deploying two resource groups within the same subscription. The first resource group simulates the **Production Environment**, housing Digital Evidence, while the second resource group holds the **SOC Environment**.
 
+> [!IMPORTANT]
+> Azure Disk Encryption (ADE) has been deprecated. This LAB uses [Encryption at Host](https://learn.microsoft.com/en-us/azure/virtual-machines/disk-encryption#encryption-at-host---end-to-end-encryption-for-your-vm-data) with platform-managed keys as the recommended approach for disk encryption. For more information, see [Overview of managed disk encryption options](https://learn.microsoft.com/en-us/azure/virtual-machines/disk-encryption-overview).
+
+> [!NOTE]
+> For scenarios requiring additional encryption beyond Encryption at Host (for example, specific compliance requirements that mandate in-guest encryption), you can implement your own in-OS encryption solution (BYO). This is a case-by-case implementation that is not covered in this LAB. You will need to evaluate what is appropriate for your specific forensics workflow.
+
 ![LAB CoC Architecture](./.diagrams/LAB_CoC_Architecture.png)
 
 The Production resource group contains:
 1. A **virtual network** containing a subnet and network security group for subnet protection.
-1. A **Windows Server 2025 VM** featuring a public IP address, an OS disk, and two data disks configured with Azure Disk Encryption (ADE).
-1. A **key vault** designed to store the BEK keys of the encrypted disks.
+1. A **Windows Server 2025 VM** featuring a public IP address, an OS disk, and two data disks with [Encryption at Host](https://learn.microsoft.com/en-us/azure/virtual-machines/disk-encryption#encryption-at-host---end-to-end-encryption-for-your-vm-data) enabled using platform-managed keys.
 
 The SOC resource group contains:
 1. A **virtual network** with a subnet and network security group for subnet protection.
@@ -65,7 +73,7 @@ The SOC resource group contains:
 1. A **storage account** for storing the digital evidence with:
     1. a blob container named *immutable* automatically configured with the [Legal Hold](https://docs.microsoft.com/en-us/azure/storage/blobs/storage-blob-immutability-policies-overview) feature
     1. a file share named *hash* used for calculating digital evidence hashes.
-1. A **key vault** for storing, in the SOC environment, a copy of the BEK keys and the hash of the digital evidence processed.
+1. A **key vault** for storing, in the SOC environment, the hash values of the digital evidence processed.
 1. A **Log Analytics Workspace** for storing the logs of the Azure resources involved in the Chain of Custody process.
 1. An **automation account** configured with:
     1. A RunBook implementing the Chain of Custody process as outlined in the [article](https://learn.microsoft.com/en-us/azure/architecture/example-scenario/forensics/)
@@ -97,69 +105,12 @@ The digital evidence is stored in the *immutable* blob container of the storage 
 > Add your IP address to both the Key Vault firewall and the Storage Account firewall defined in the SOC resource group.
 
 ![Screenshot of the immutable container](./.diagrams/JobCompleted_SA.jpg)
-The hash of the digital evidence is stored in the Key Vault of the SOC stored with the same name of the digital evidence followed by the suffix "-hash" and the algorithm used. The BEK secrets are stored in the key vault of the SOC with the name of the digital evidence. 
+The hash of the digital evidence is stored in the Key Vault of the SOC stored with the same name of the digital evidence followed by the suffix "-hash" and the algorithm used.
 ![Screenshot of the Key Vault](./.diagrams/JobCompleted_KV.jpg)
 After downloading digital evidence, recalculate the hash for comparison with the KeyVault-stored hash to verify integrity.
 
 > [!NOTE]
 > The [Appendix](#hash-utility) section below provides a PowerShell script to recalculate the hash of the digital evidence.
-
-For digital evidence decryption, get the BEK keys from the SOC environment's Key Vault and follow instructions outlined in the [section](#windows-disks-unlock) below.
-
-> [!NOTE]
-> As the VM deployed in this LAB environment is a Windows Server, you can follow the instructions provided in the [Windows disk unlock](#windows-disks-unlock) section. If you wish to extend the LAB with a Linux VM that has ADE enabled, the [Linux disk unlock](#linux-disks-unlock) section  provides detailed steps for digital evidence decryption on Linux.
-The sections assume that the optional KEK encryption is not used to wrap the BEK. For more information on how to unlock an encrypted disk for offline repair, please refer to https://learn.microsoft.com/en-us/troubleshoot/azure/virtual-machines/unlock-encrypted-disk-offline
-
-#### Windows disks unlock
-
-The Azure Windows disks are locked by BitLocker. Once the disk is attached on a Windows machine the content is not readable, until it's unlocked.
-
-To unlock an Azure disk connected, for example, on G:\ execute below actions:
-
-1. Open the SOC key vault, and search the secret containing the BEK of the disk. The secret is named with the timestamp prefix shown in the output of the RunBook execution
-![Screenshot of the BEK secret](./.diagrams/JobCompleted_KV_BEKSecret.jpg)
-1. Copy the BEK secret value and paste it into the `$bekSecretBase64` variable in the following PowerShell script. Paste the value of the `DiskEncryptionKeyFileName` tag associated to the secret into the `$fileName` variable
-1. Run the script
-
-    ```powershell
-    $bekSecretbase64="<paste the BEK string here>"
-    $fileName="<paste the DiskEncryptionKeyFileName tag value here>"
-
-    $bekFileBytes = [Convert]::FromBase64String($bekSecretbase64)
-    $path = "C:\BEK\$fileName"
-    [System.IO.File]::WriteAllBytes($path,$bekFileBytes)
-
-    manage-bde -unlock G: -rk $path
-    ```
-
-#### Linux disks unlock
-
-The Azure Linux disks are locked by DM-Crypt. The content of the disk is not accessible until the disk is unlocked.
-
-To unlock an Azure disk and mount it under the directory `datadisk`:
-
-1. Open the SOC key vault, and search the secret containing the BEK of the disk. The secret is named with the timestamp prefix shown in the output of the RunBook execution
-1. Copy the BEK string and paste it into the `bekSecretBase64` variable in the following bash script
-1. Run the script
-
-    ```bash
-   #!/bin/bash
-
-   bekSecretbase64="<paste the BEK string here>"
-   mountname="datadisk"
-   device=$(blkid -t TYPE=crypto_LUKS -o device)
-   passphrase="$(base64 -d <<< $bekSecretbase64)"
-
-   echo "Passphrase: " $passphrase
-
-   if [ ! -d "${mountname:+$mountname/}" ]; then
-    mkdir $mountname
-   fi
-
-   cryptsetup open $device $mountname
-    ```
-
-After the script execution, you will be prompted for the encryption passphrase. Copy it from the script output to unlock and access the content of the Azure data disk.
 
 ## Remove the LAB environment
 
@@ -201,7 +152,7 @@ The RunBook executes the PowerShell script [Copy-VmDigitalEvidenceWin_21.ps1](./
 1. Signs in to Azure with the System Managed Identity of the automation account
 1. Creates temporary snapshots of the OS disk and Data disks of the virtual machine
 1. Copies the snapshots to the SOC Azure Blob container named *immutable*
-1. If virtual machine's disks are encrypted with Azure Disk Encryption (ADE), copies the BEK keys of the disks to the SOC key vault. A secret named with the timestamp of the RunBook execution contains the encryption key and all the tags to identify the disk and volume
+1. If the virtual machine's disks use in-OS encryption (BYO), copies the encryption keys to the SOC key vault. A secret named with the timestamp of the RunBook execution contains the encryption key and all the tags to identify the disk and volume
 1. If hash calculation is requested then:
     a. Copies the snapshots to the SOC Azure file share named *hash*
     b. Calculates the hash of the snapshots stored on the file share using the specified algorithm
@@ -212,9 +163,6 @@ The RunBook executes the PowerShell script [Copy-VmDigitalEvidenceWin_21.ps1](./
 > [!NOTE]
 > The RunBook performs the actions above with the System Managed Identity of the automation account. The identity has been granted the necessary permissions to access both Production and SOC resource groups during deployment process of LAB environment described in this guide. If you want to implement complete solution described in the [article](https://learn.microsoft.com/en-us/azure/architecture/example-scenario/forensics/), using different subscriptions and resource groups, please make sure that System Managed Identity of automation account has following permissions:
 >- *Contributor*: on the Production resource group of the virtual machine to be processed (needed to create the snapshots)
->- *Key Vault Secrets User*: on the Production Key Vault holding the BEK keys (needed to read  the BEK keys)
->
->Additionally, if the Key Vault has the firewall enabled, ensure that the public IP address of the Hybrid RunBook Worker VM is allowed through the firewall.
 
 > [DISCLAIMER]
 > The sample scripts are not supported under any Microsoft standard support program or service. The sample scripts are provided AS IS without warranty of any kind. Microsoft further disclaims all implied warranties including, without limitation, any implied warranties of merchantability or of fitness for a particular purpose. The entire risk arising out of the use or performance of the sample scripts and documentation remains with you. In no event shall Microsoft, its authors, or anyone else involved in the creation, production, or delivery of the scripts be liable for any damages whatsoever (including, without limitation, damages for loss of business profits, business interruption, loss of business information, or other pecuniary loss) arising out of the use of or inability to use the sample scripts or documentation, even if Microsoft has been advised of the possibility of such damages.

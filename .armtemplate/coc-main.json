@@ -33,13 +33,6 @@
         "defaultValue": "CoC-Production-vnet-server-nsg",
         "type": "String"
     },
-    "coc-prod-keyvault_name": {
-        "metadata": {
-            "description": "Name of the key vault."
-        },
-        "defaultValue": "CoC-Prod-KV-<UNIQUESTRING>",
-        "type": "String"
-    },
     "coc-prod-VM01_name": {
         "metadata": {
             "description": "Name of the virtual machine."
@@ -145,20 +138,20 @@
   "resources": [
     {
       "type": "Microsoft.Resources/resourceGroups",
-      "apiVersion": "2020-06-01",
+      "apiVersion": "2024-07-01",
       "name": "[parameters('coc-soc-rg_name')]",
       "location": "[parameters('coc-Location')]",
       "properties": {}
     },
     {
       "type": "Microsoft.Resources/resourceGroups",
-      "apiVersion": "2020-06-01",
+      "apiVersion": "2024-07-01",
       "name": "[parameters('coc-prod-rg_name')]",
       "location": "[parameters('coc-Location')]",
       "properties": {}
     },
     {
-      "apiVersion": "2019-10-01",
+      "apiVersion": "2024-07-01",
       "name": "CoC-PROD-nestedDeployment",
       "type": "Microsoft.Resources/deployments",
       "dependsOn": [
@@ -173,7 +166,7 @@
       },
       "parameters": {
           "location": {
-              "value": "[reference(resourceId('Microsoft.Resources/resourceGroups/', parameters('coc-prod-rg_name')),'2019-10-01','Full').location]"
+              "value": "[reference(resourceId('Microsoft.Resources/resourceGroups/', parameters('coc-prod-rg_name')),'2024-07-01','Full').location]"
           },
           "virtualMachines_CoC_Prod_VM01_name": {
               "value": "[parameters('coc-prod-VM01_name')]"
@@ -183,9 +176,6 @@
           },
           "adminPassword": {
               "value": "[parameters('coc-prod-VM01_adminPassword')]"
-          },
-          "vaults_CoC_Production_keyvault_name": {
-              "value": "[parameters('coc-prod-keyvault_name')]"
           },
           "virtualNetworks_CoC_Production_vnet_name": {
               "value": "[parameters('coc-prod-vnet_name')]"
@@ -198,7 +188,7 @@
     },
 
     {
-      "apiVersion": "2019-10-01",
+      "apiVersion": "2024-07-01",
       "name": "CoC-SOC-nestedDeployment",
       "type": "Microsoft.Resources/deployments",
       "dependsOn": [
@@ -214,7 +204,7 @@
         },
       "parameters": {
           "coc-soc-location": {
-              "value": "[reference(resourceId('Microsoft.Resources/resourceGroups/', parameters('coc-prod-rg_name')),'2019-10-01','Full').location]"
+              "value": "[reference(resourceId('Microsoft.Resources/resourceGroups/', parameters('coc-prod-rg_name')),'2024-07-01','Full').location]"
           },
           "coc-soc-HRW_VM_name": {
               "value": "[parameters('coc-soc-HRW_VM_name')]"
@@ -253,7 +243,7 @@
       }
     },
      {
-      "apiVersion": "2019-10-01",
+      "apiVersion": "2024-07-01",
       "name": "CoC-roles-nestedDeployment",
       "type": "Microsoft.Resources/deployments",
       "dependsOn": [

@@ -17,6 +17,10 @@
     the hash of all disks if specified in the CalculateHash parameter, and stores them
     in the SOC Key Vault.
 
+    If the source VM uses in-OS encryption (BYO), the script also copies the encryption
+    keys to the SOC Key Vault. When Encryption at Host with platform-managed keys is
+    used, no additional disk unlock is required for the exported evidence.
+
     The hash calculation may require a long time to complete, depending on the algorithm 
     chosen and on the size of the disks. The script will run in parallel jobs (one job 
     for each disk) to speed up the process. The most performant algorithm is SKEIN because
@@ -70,7 +74,7 @@ $destSubId  = Get-AutomationVariable -Name 'destSubId'  # The subscription conta
 $destRGName = Get-AutomationVariable -Name 'destRGName' # The name of the resource group containing the storage account being copied to 
 $destSAblob = Get-AutomationVariable -Name 'destSAblob' # The name of the storage account for BLOB
 $destSAfile = Get-AutomationVariable -Name 'destSAfile' # The name of the storage account for FILE
-$destKV     = Get-AutomationVariable -Name 'destKV'     # The name of the keyvault to store a copy of the BEK in the dest subscription
+$destKV     = Get-AutomationVariable -Name 'destKV'     # The name of the keyvault to store hash values of digital evidence in the dest subscription
 
 # Please do not change the following constants
 $destTempShare = 'hash'                               # The temporary file share mounted on the hybrid worker
@@ -93,11 +97,11 @@ Write-Output "VirtualMachineName: $VirtualMachineName"
     # Uninstall-Module Az.Storage -Force
     # Uninstall-Module Az.KeyVault -Force    
 
-    # Install-Module Az.Accounts -requiredVersion 2.12.1
-    # Install-Module Az.Resources -requiredVersion 6.6.0
-    # Install-Module Az.Compute -requiredVersion 5.7.0
-    # Install-Module Az.Storage -requiredVersion 5.5.0
-    # Install-Module Az.KeyVault -requiredVersion 4.9.2
+    # Install-Module Az.Accounts -requiredVersion 5.3.3
+    # Install-Module Az.Resources -requiredVersion 9.0.3
+    # Install-Module Az.Compute -requiredVersion 11.4.0
+    # Install-Module Az.Storage -requiredVersion 9.6.0
+    # Install-Module Az.KeyVault -requiredVersion 6.4.3
 
 #############################################################################################
 
@@ -128,7 +132,7 @@ $SHA256scriptBlock = {
 
 $SKEINscriptBlock = {
     param($filePath)
-    $KVmodulePath = "C:\Program Files\WindowsPowerShell\Modules\Az.KeyVault\4.9.2"
+    $KVmodulePath = "C:\Program Files\WindowsPowerShell\Modules\Az.KeyVault\6.4.3"
     Add-Type -Path "$KVmodulePath\BouncyCastle.Crypto.dll" # DLL available in the Az.Keyvault PowerShell module folder
 
     #https://javadoc.io/static/org.bouncycastle/bcprov-jdk14/1.57/org/bouncycastle/crypto/digests/SkeinDigest.html
@@ -157,7 +161,7 @@ $SKEINscriptBlock = {
 
 $KECCAKscriptBlock = {
     param($filePath)
-    $KVmodulePath = "C:\Program Files\WindowsPowerShell\Modules\Az.KeyVault\4.9.2"
+    $KVmodulePath = "C:\Program Files\WindowsPowerShell\Modules\Az.KeyVault\6.4.3"
     Add-Type -Path "$KVmodulePath\BouncyCastle.Crypto.dll" # DLL available in the Az.Keyvault PowerShell module folder
 
     # https://javadoc.io/static/org.bouncycastle/bcprov-jdk14/1.57/org/bouncycastle/crypto/digests/SHA3Digest.html
@@ -205,7 +209,6 @@ if ($bios) {
     #  - "Storage Account Contributor" on the immutable SOC Storage Account
     #  - "Key Vault Secrets Officer" on the SOC Key Vault
     #  - "Key Vault Crypto Officer" on the SOC Key Vault (for future implementation of KEK option)
-    #  - "Key Vault Secrets User" on the Key Vault used by target Virtual Machine
     
 
     Write-Output "Logging in to Azure..."
@@ -458,7 +461,7 @@ if ($bios) {
     Write-Output ""
     Write-Output "NOTE: $snapshotPrefix is the timestamp prefix used for:  "
     Write-Output "  - the digital evidences stored in the immutable blob container of the SOC Storage Account ($destSAblob)" 
-    Write-Output "  - the secrets (hash and BEK) stored in the SOC Key Vault ($destKV)"
+    Write-Output "  - the secrets (hash values) stored in the SOC Key Vault ($destKV)"
     Write-Output "########################################################################"
 
 }
