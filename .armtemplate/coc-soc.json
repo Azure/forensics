@@ -244,7 +244,7 @@
         },
         {
             "type": "Microsoft.KeyVault/vaults",
-            "apiVersion": "2024-04-01",
+            "apiVersion": "2026-02-01",
             "name": "[parameters('coc-soc-keyvault_name')]",
             "location": "[parameters('coc-soc-Location')]",
             "dependsOn": [
