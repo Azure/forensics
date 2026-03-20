@@ -30,7 +30,7 @@ Write-Output $StorageAccountResourceID
     Install-Module Az.KeyVault -requiredVersion 6.4.3 -Repository PSGallery -Scope AllUsers -Force
 
     Uninstall-Module Az.Accounts -Force
-    Install-Module Az.Accounts -requiredVersion 5.3.3
+    Install-Module Az.Accounts -requiredVersion 5.3.3 -Repository PSGallery -Scope AllUsers -Force
 
 # Set LegalHold Access Policy to the immutable container of the Storage Account
 
