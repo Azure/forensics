@@ -20,17 +20,21 @@ param (
 Write-Host $StorageAccountResourceID
 Write-Output $StorageAccountResourceID
 
+# Suppress progress bars to avoid slowdown in non-interactive mode
+$ProgressPreference = 'SilentlyContinue'
+
 # Required powershell module for the Hybrid Runbook Worker
     Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
+    Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
 
-    Install-Module Az.Accounts -requiredVersion 5.3.3 -Repository PSGallery -Scope AllUsers -Force
-    Install-Module Az.Resources -requiredVersion 9.0.3 -Repository PSGallery -Scope AllUsers -Force
-    Install-Module Az.Compute -requiredVersion 11.4.0 -Repository PSGallery -Scope AllUsers -Force
-    Install-Module Az.Storage -requiredVersion 9.6.0 -Repository PSGallery -Scope AllUsers -Force
-    Install-Module Az.KeyVault -requiredVersion 6.4.3 -Repository PSGallery -Scope AllUsers -Force
+    Install-Module Az.Accounts -RequiredVersion 5.3.3 -Repository PSGallery -Scope AllUsers -Force -AllowClobber
+    Install-Module Az.Resources -RequiredVersion 9.0.3 -Repository PSGallery -Scope AllUsers -Force -AllowClobber
+    Install-Module Az.Compute -RequiredVersion 11.4.0 -Repository PSGallery -Scope AllUsers -Force -AllowClobber
+    Install-Module Az.Storage -RequiredVersion 9.6.0 -Repository PSGallery -Scope AllUsers -Force -AllowClobber
+    Install-Module Az.KeyVault -RequiredVersion 6.4.3 -Repository PSGallery -Scope AllUsers -Force -AllowClobber
 
-    Uninstall-Module Az.Accounts -Force
-    Install-Module Az.Accounts -requiredVersion 5.3.3 -Repository PSGallery -Scope AllUsers -Force
+    Uninstall-Module Az.Accounts -Force -ErrorAction SilentlyContinue
+    Install-Module Az.Accounts -RequiredVersion 5.3.3 -Repository PSGallery -Scope AllUsers -Force -AllowClobber
 
 # Set LegalHold Access Policy to the immutable container of the Storage Account
 

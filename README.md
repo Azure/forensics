@@ -92,6 +92,8 @@ Access the automation account within the SOC resource group and navigate to the 
 |CALCULATEHASH|If true the RunBook will calculate the hash of the digital evidence. Supported values are TRUE or FALSE| TRUE|
 |HASHALGORITHM|The algorithm used to calculate the hash of the digital evidence. Supported Values are MD5, SHA256, SKEIN, KECCAK (or SHA3)|SHA3|
 
+Chech the box to start the runbook from the Hybrid Worker, and select the hybrid worker group from the list.
+
 > [!NOTE]
 > The RunBook applied to the LAB's deployed VM will take around 45 minutes to complete (or 15 minutes without hash calculation). Completion time depends on attached disk sizes. Hash calculation is time-intensive, executed via parallel jobs for faster processing across all disks.
 
