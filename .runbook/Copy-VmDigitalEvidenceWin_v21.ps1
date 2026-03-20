@@ -196,6 +196,13 @@ $KECCAKscriptBlock = {
 
 $swGlobal = [Diagnostics.Stopwatch]::StartNew()
 
+# Explicitly import Az modules with required versions to avoid conflicts
+# with Azure Automation built-in modules on the Hybrid Runbook Worker
+Import-Module Az.Accounts -RequiredVersion 5.3.3 -ErrorAction Stop
+Import-Module Az.Compute -RequiredVersion 11.4.0 -ErrorAction Stop
+Import-Module Az.Storage -RequiredVersion 9.6.0 -ErrorAction Stop
+Import-Module Az.KeyVault -RequiredVersion 6.4.3 -ErrorAction Stop
+
 ################################## Hybrid Worker Check ######################################
 $bios= Get-WmiObject -class Win32_BIOS
 if ($bios) {   
