@@ -20,21 +20,17 @@ param (
 Write-Host $StorageAccountResourceID
 Write-Output $StorageAccountResourceID
 
-# Suppress progress bars to avoid slowdown in non-interactive mode
-$ProgressPreference = 'SilentlyContinue'
-
 # Required powershell module for the Hybrid Runbook Worker
     Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
-    Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
 
-    Install-Module Az.Accounts -RequiredVersion 5.3.3 -Repository PSGallery -Scope AllUsers -Force -AllowClobber
-    Install-Module Az.Resources -RequiredVersion 9.0.3 -Repository PSGallery -Scope AllUsers -Force -AllowClobber
-    Install-Module Az.Compute -RequiredVersion 11.4.0 -Repository PSGallery -Scope AllUsers -Force -AllowClobber
-    Install-Module Az.Storage -RequiredVersion 9.6.0 -Repository PSGallery -Scope AllUsers -Force -AllowClobber
-    Install-Module Az.KeyVault -RequiredVersion 6.4.3 -Repository PSGallery -Scope AllUsers -Force -AllowClobber
+    Install-Module Az.Accounts -requiredVersion 2.12.1 -Repository PSGallery -Scope AllUsers -Force
+    Install-Module Az.Resources -requiredVersion 6.6.0 -Repository PSGallery -Scope AllUsers -Force
+    Install-Module Az.Compute -requiredVersion 5.7.0 -Repository PSGallery -Scope AllUsers -Force
+    Install-Module Az.Storage -requiredVersion 5.5.0 -Repository PSGallery -Scope AllUsers -Force
+    Install-Module Az.KeyVault -requiredVersion 4.9.2 -Repository PSGallery -Scope AllUsers -Force
 
     Uninstall-Module Az.Accounts -Force -ErrorAction SilentlyContinue
-    Install-Module Az.Accounts -RequiredVersion 5.3.3 -Repository PSGallery -Scope AllUsers -Force -AllowClobber
+    Install-Module Az.Accounts -RequiredVersion 2.12.1 -Repository PSGallery -Scope AllUsers -Force
 
 # Set LegalHold Access Policy to the immutable container of the Storage Account
 
@@ -84,7 +80,7 @@ $BodyJson = '{
     ]
 }' 
 
-$uri = "https://management.azure.com/subscriptions/$subscriptionID/resourceGroups/$resourceGroupName/providers/Microsoft.Storage/storageAccounts/$storageAccountName/blobServices/default/containers/$containerName/setLegalHold?api-version=2024-01-01"
+$uri = "https://management.azure.com/subscriptions/$subscriptionID/resourceGroups/$resourceGroupName/providers/Microsoft.Storage/storageAccounts/$storageAccountName/blobServices/default/containers/$containerName/setLegalHold?api-version=2023-05-01"
 
 
 $setLegalHoldPolicy = Invoke-WebRequest -Uri $Uri -Headers $Header -Method 'POST' -ContentType "application/json" -Body $BodyJson  -UseBasicParsing

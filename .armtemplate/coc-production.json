@@ -236,7 +236,7 @@
                 "fileUris": [
                     "https://raw.githubusercontent.com/Azure/forensics/main/.powershell/prod-vm.ps1"
                 ],
-                "commandToExecute": "start powershell -ExecutionPolicy Unrestricted -File prod-vm.ps1"
+                "commandToExecute": "powershell -ExecutionPolicy Unrestricted -File prod-vm.ps1"
             }
         }
         },

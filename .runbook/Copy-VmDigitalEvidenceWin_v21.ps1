@@ -97,11 +97,11 @@ Write-Output "VirtualMachineName: $VirtualMachineName"
     # Uninstall-Module Az.Storage -Force
     # Uninstall-Module Az.KeyVault -Force    
 
-    # Install-Module Az.Accounts -requiredVersion 5.3.3
-    # Install-Module Az.Resources -requiredVersion 9.0.3
-    # Install-Module Az.Compute -requiredVersion 11.4.0
-    # Install-Module Az.Storage -requiredVersion 9.6.0
-    # Install-Module Az.KeyVault -requiredVersion 6.4.3
+    # Install-Module Az.Accounts -requiredVersion 2.12.1
+    # Install-Module Az.Resources -requiredVersion 6.6.0
+    # Install-Module Az.Compute -requiredVersion 5.7.0
+    # Install-Module Az.Storage -requiredVersion 5.5.0
+    # Install-Module Az.KeyVault -requiredVersion 4.9.2
 
 #############################################################################################
 
@@ -132,7 +132,7 @@ $SHA256scriptBlock = {
 
 $SKEINscriptBlock = {
     param($filePath)
-    $KVmodulePath = "C:\Program Files\WindowsPowerShell\Modules\Az.KeyVault\6.4.3"
+    $KVmodulePath = "C:\Program Files\WindowsPowerShell\Modules\Az.KeyVault\4.9.2"
     Add-Type -Path "$KVmodulePath\BouncyCastle.Crypto.dll" # DLL available in the Az.Keyvault PowerShell module folder
 
     #https://javadoc.io/static/org.bouncycastle/bcprov-jdk14/1.57/org/bouncycastle/crypto/digests/SkeinDigest.html
@@ -161,7 +161,7 @@ $SKEINscriptBlock = {
 
 $KECCAKscriptBlock = {
     param($filePath)
-    $KVmodulePath = "C:\Program Files\WindowsPowerShell\Modules\Az.KeyVault\6.4.3"
+    $KVmodulePath = "C:\Program Files\WindowsPowerShell\Modules\Az.KeyVault\4.9.2"
     Add-Type -Path "$KVmodulePath\BouncyCastle.Crypto.dll" # DLL available in the Az.Keyvault PowerShell module folder
 
     # https://javadoc.io/static/org.bouncycastle/bcprov-jdk14/1.57/org/bouncycastle/crypto/digests/SHA3Digest.html
@@ -198,10 +198,10 @@ $swGlobal = [Diagnostics.Stopwatch]::StartNew()
 
 # Explicitly import Az modules with required versions to avoid conflicts
 # with Azure Automation built-in modules on the Hybrid Runbook Worker
-Import-Module Az.Accounts -RequiredVersion 5.3.3 -ErrorAction Stop
-Import-Module Az.Compute -RequiredVersion 11.4.0 -ErrorAction Stop
-Import-Module Az.Storage -RequiredVersion 9.6.0 -ErrorAction Stop
-Import-Module Az.KeyVault -RequiredVersion 6.4.3 -ErrorAction Stop
+Import-Module Az.Accounts -RequiredVersion 2.12.1 -ErrorAction Stop
+Import-Module Az.Compute -RequiredVersion 5.7.0 -ErrorAction Stop
+Import-Module Az.Storage -RequiredVersion 5.5.0 -ErrorAction Stop
+Import-Module Az.KeyVault -RequiredVersion 4.9.2 -ErrorAction Stop
 
 ################################## Hybrid Worker Check ######################################
 $bios= Get-WmiObject -class Win32_BIOS
