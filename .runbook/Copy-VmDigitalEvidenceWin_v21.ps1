@@ -262,9 +262,13 @@ if ($bios) {
         $diskResource = Get-AzDisk -ResourceGroupName $ResourceGroupName -DiskName $disk.Name
         $snapshot = New-AzSnapshotConfig -SourceUri $diskResource.Id -CreateOption Copy -Location $vm.Location
         $snapshotName = $snapshotPrefix + "-" + $disk.Name.Replace("_","-")
+        $inGuestEncryptionSecretUrl = $null
+        if ($diskResource.EncryptionSettingsCollection -and $diskResource.EncryptionSettingsCollection.EncryptionSettings) {
+            $inGuestEncryptionSecretUrl = $diskResource.EncryptionSettingsCollection.EncryptionSettings.DiskEncryptionKey.SecretUrl
+        }
         $snapshots += [PSCustomObject]@{
             Disk = $disk
-            BEKurl = $diskResource.EncryptionSettingsCollection.EncryptionSettings.DiskEncryptionKey.SecretUrl
+            InGuestEncryptionSecretUrl = $inGuestEncryptionSecretUrl
             Snapshot = $snapshot
             SnapshotName = $snapshotName
         }
@@ -300,21 +304,21 @@ if ($bios) {
             Start-AzStorageFileCopy -AbsoluteUri $snapSasUrl.AccessSAS -DestShareName $destTempShare -DestContext $targetStorageContextFile -DestFilePath $($snapshot.SnapshotName) -Force
         }
 
-        # Copy the disk BEK to the SOC Key Vault
-        $BEKurl = $snapshot.BEKurl
-        if ($BEKurl) {
+        # Copy the in-guest encryption secret to the SOC Key Vault when present.
+        $inGuestEncryptionSecretUrl = $snapshot.InGuestEncryptionSecretUrl
+        if ($inGuestEncryptionSecretUrl) {
             Set-AzContext -Subscription $SubscriptionId
-            $sourcekv = $BEKurl.Split("/")
-            $BEK = Get-AzKeyVaultSecret -VaultName $sourcekv[2].split(".")[0] -Name $sourcekv[4] -Version $sourcekv[5]
+            $sourcekv = $inGuestEncryptionSecretUrl.Split("/")
+            $inGuestEncryptionSecret = Get-AzKeyVaultSecret -VaultName $sourcekv[2].split(".")[0] -Name $sourcekv[4] -Version $sourcekv[5]
             Write-Output "#################################################################"
-            Write-Output "Disk Encryption Secret URL: $BEKurl"
-            Write-Output "Key value: $($BEK.SecretValue)"
+            Write-Output "In-guest encryption secret URL: $inGuestEncryptionSecretUrl"
+            Write-Output "Key value: $($inGuestEncryptionSecret.SecretValue)"
             Write-Output "#################################################################"
             Set-AzContext -Subscription $destSubId
-            Set-AzKeyVaultSecret -VaultName $destKV -Name $snapshot.SnapshotName -SecretValue $BEK.SecretValue -ContentType "BEK" -Tag $BEK.Tags
+            Set-AzKeyVaultSecret -VaultName $destKV -Name $snapshot.SnapshotName -SecretValue $inGuestEncryptionSecret.SecretValue -ContentType "in-guest-encryption-secret" -Tag $inGuestEncryptionSecret.Tags
         }
         else {
-            Write-Output "Disk not encrypted"
+            Write-Output "Disk has no in-guest encryption metadata."
         }
     }
 
